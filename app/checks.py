@@ -21,7 +21,7 @@ from . import records
 from .read_invoice import extract, has_text_layer
 from .gstin import validate as gstin_check
 from .clean_values import (clean_po, financial_year, inr, invoice_serial,
-                        parse_date, to_amount)
+                        parse_date, to_amount, words_to_amount)
 
 SEVERITY = {"PASS": 0, "INFO": 1, "HOLD": 2, "REJECT": 3}
 
@@ -54,6 +54,31 @@ STATUS = {0: "pass", 1: "warn", 2: "hold", 3: "reject"}
 CONFIRMABLE = {"BUYER_CONFIRM", "NEW_SMALL_SUPPLIER"}
 
 
+def one_slip(a, b):
+    """True if two phone numbers differ by one wrong digit or two swapped neighbours:
+    the mistakes people make writing a number down."""
+    if len(a) != len(b) or a == b:
+        return False
+    diff = [i for i in range(len(a)) if a[i] != b[i]]
+    return len(diff) == 1 or (len(diff) == 2 and diff[1] == diff[0] + 1
+                              and a[diff[0]] == b[diff[1]] and a[diff[1]] == b[diff[0]])
+
+
+def book_of(f, serial):
+    """Which bill book a bill comes from. Shops often run two or three books at once (cash and
+    credit, one per counter). Use the book number or series if one is printed; otherwise bill
+    books come in pads of 100 pages, so pages 0401-0500 are one book and 0101-0200 another."""
+    if f.get("bill_book_no"):
+        return "book " + "".join(ch for ch in f["bill_book_no"] if ch.isalnum()).lower().removeprefix("bookno").removeprefix("book")
+    prefix = "".join(ch for ch in (f.get("invoice_number") or "").split("/")[0].split("-")[0] if ch.isalpha())
+    if prefix:
+        return "series " + prefix.upper()
+    if serial is None:
+        return None
+    lo = (serial - 1) // 100 * 100 + 1
+    return f"pages {lo:04d}-{lo + 99:04d}"
+
+
 def similar(a, b):
     """0-100 likeness of two names or descriptions, ignoring case and punctuation
     (invoices often print names in capitals: APEX OFFICE SUPPLIES = Apex Office Supplies)."""
@@ -69,6 +94,8 @@ class Run:
         self.buyer, self.policy, self.vendors, self.pos = records.load_master()
         self.con = records.connect()
         self.flags = []          # every finding that affects the decision
+        self.signs = []          # warning signs on a small supplier's bill (see sign())
+        self.extra_phones = records.extra_phones(self.con)   # numbers a clerk has checked and added
         self.ctx = {}            # values later stages need
         self.stages = []
 
@@ -78,6 +105,15 @@ class Run:
         self.flags.append(dict(stage=stage, severity=severity, code=code, message=message,
                                audience=audience, action=action, vendor_msg=vendor_msg or message,
                                short=short or SHORTS.get(code) or message, row=row))
+
+    def sign(self, stage, code, serious, message, short, action=None):
+        """A warning sign on a small supplier's bill. Small suppliers have no GSTIN, so there is
+        little on their bills we can prove; instead we count what looks off. One small sign is
+        usually an innocent mistake and is just noted; two need a phone call to the shop; three,
+        or one serious sign, hold the bill. Every sign is written so anyone can follow it."""
+        self.signs.append(dict(code=code, serious=serious, text=short))
+        self.flag(stage, "HOLD" if serious else "INFO", code, message, audience="internal",
+                  action=action, short=short)
 
     def _digits(self, x):
         return "".join(ch for ch in (x or "") if ch.isdigit())[-10:]  # last 10 digits of a phone number
@@ -305,6 +341,31 @@ class Run:
                       short=(f"{inr(taxable)} + {inr(tax)} GST = {inr(taxable + tax)}, but the invoice asks for {inr(total)}."
                              if ok_lines else "The line items don't add up to the amounts printed."))
 
+        words = words_to_amount(f.get("amount_in_words"))
+        if words is not None:
+            ok_words = abs(words - total) <= 1
+            checks.append(dict(label="Amount in words matches the figures", ok=ok_words,
+                               detail=f"'{f['amount_in_words']}' = {inr(words)}"))
+            if not ok_words:
+                self.flag("validate", "HOLD", "AMOUNT_WORDS",
+                          f"The total in figures is {inr(total)}, but in words the bill says '{f['amount_in_words']}', which is {inr(words)}. "
+                          "Either one was changed after the bill was written, or it was written wrongly. Figures are easy to change "
+                          "(a 3 into an 8); words aren't, so this is a common sign of tampering.",
+                          audience="vendor", action="Ask the supplier which amount is right, and get a corrected bill.",
+                          short=f"The total says {inr(total)} in figures but {inr(words)} in words.",
+                          vendor_msg=f"Your bill shows {inr(total)} in figures but {inr(words)} in words. Please confirm the correct amount "
+                                     "and send a corrected bill.")
+                if self.ctx.get("unregistered"):
+                    self.signs.append(dict(code="AMOUNT_WORDS", serious=True, text=self.flags[-1]["short"]))
+        if (f.get("paid_status") or "").lower() == "paid":
+            mode = (f.get("payment_mode") or "").lower()
+            self.ctx["paid_at_counter"] = True
+            checks.append(dict(label="Already paid?", ok=None, detail="marked paid at the counter" + (f", by {mode}" if mode else "")))
+            self.flag("validate", "INFO", "PAID_AT_COUNTER",
+                      "The bill is marked as already paid at the counter" + (f" ({mode})" if mode else "") + ". So the shop has been "
+                      "paid; paying the shop again would pay twice. Instead, we pay back the staff member who paid.",
+                      short="already paid at the counter, so we repay whoever paid")
+
         d = parse_date(f.get("invoice_date"))
         age = (date.today() - d).days if d else None
         ok_date = d is not None and 0 <= age <= pol["max_invoice_age_days"]
@@ -333,7 +394,8 @@ class Run:
         how = "GSTIN"
         if not v and f.get("vendor_phone") and len(digits(f["vendor_phone"])) == 10:
             # small suppliers have no GSTIN, but their phone number is on every bill
-            v = next((x for x in self.vendors if digits(x.get("phone")) == digits(f["vendor_phone"])), None)
+            v = next((x for x in self.vendors if digits(f["vendor_phone"]) in
+                      [digits(x.get("phone"))] + self.extra_phones.get(x["vendor_id"], [])), None)
             how = "phone number"
         if not v and f.get("vendor_name"):
             best = max(self.vendors, key=lambda x: similar(x["name"], f["vendor_name"]))
@@ -411,19 +473,41 @@ class Run:
         occasional buys: a fake bill usually gets the shop's name right but not its number, and
         regular buying above a monthly limit should go through a proper supplier set-up."""
         f, total = self.ctx["f"], self.ctx.get("total") or 0
-        on_bill, on_file = self._digits(f.get("vendor_phone")), self._digits(v.get("phone"))
-        if len(on_bill) == 10 and on_file and on_bill != on_file:
-            checks.append(dict(label="Phone number matches the one on file", ok=False,
-                               detail=f"bill {f['vendor_phone']} vs on file {v['phone']}"))
-            self.flag("vendor", "HOLD", "PHONE_MISMATCH",
-                      f"The bill gives the phone number {f['vendor_phone']}, but {v['name']}'s number on file is {v['phone']}. "
-                      "A supplier without a GSTIN is known by its phone number, and a fake bill usually copies the shop's name, not its number.",
-                      audience="internal",
-                      action=f"Call {v['name']} on {v['phone']} (the number on file) and ask whether they issued this bill.",
-                      short=f"The phone number on the bill ({f['vendor_phone']}) isn't {v['name']}'s ({v['phone']}).")
-        elif on_file:
-            checks.append(dict(label="Phone number matches the one on file", ok=True if on_bill else None,
-                               detail=f"{v['phone']}" if on_bill else "no phone number on the bill"))
+        on_bill = self._digits(f.get("vendor_phone"))
+        known = [self._digits(v.get("phone"))] + self.extra_phones.get(v["vendor_id"], [])
+        known = [k for k in known if k]
+        if len(on_bill) == 10 and known and on_bill not in known:
+            near = next((k for k in known if one_slip(on_bill, k)), None)
+            checks.append(dict(label="Phone number matches the one we have", ok=False,
+                               detail=f"bill {f['vendor_phone']}, ours {v['phone']}" + (" (looks like a typo)" if near else "")))
+            self.ctx["phone_on_bill"] = f["vendor_phone"]
+            if near:
+                self.sign("vendor", "PHONE_TYPO", False,
+                          f"The phone number on the bill, {f['vendor_phone']}, is one slip away from {v['name']}'s number, {v['phone']}. "
+                          "That's usually a writing mistake. It doesn't matter for payment: we only ever call the number we have, and pay "
+                          "the UPI ID or account we have, never ones written on a bill.",
+                          short=f"The phone number on the bill looks like a typo of {v['name']}'s ({v['phone']}).")
+            else:
+                self.ctx["phone_unknown"] = True
+                self.sign("vendor", "PHONE_DIFFERENT", True,
+                          f"The bill gives the phone number {f['vendor_phone']}, but the number we have for {v['name']} is {v['phone']}. "
+                          "A shop without a GSTIN is known by its phone number, and a fake bill usually copies a shop's name, not its number. "
+                          "It could also simply be the shop's second number.",
+                          short=f"The phone number on the bill ({f['vendor_phone']}) isn't {v['name']}'s ({v['phone']}).",
+                          action=f"Call {v['name']} on {v['phone']}, the number we have, and ask whether they wrote this bill. If they did and "
+                                 "the other number is theirs too, add it to their file and check the bill again.")
+        elif known:
+            checks.append(dict(label="Phone number matches the one we have", ok=True if on_bill else None,
+                               detail=f"{f['vendor_phone']}" if on_bill else "no phone number on the bill"))
+        past = [h["total"] for h in self._saved(v) if h["total"]]
+        if len(past) >= 3:
+            usual = sorted(past)[len(past) // 2]
+            checks.append(dict(label="Amount is in line with earlier bills", ok=total <= 3 * usual,
+                               detail=f"usually about {inr(usual)}"))
+            if total > 3 * usual:
+                self.sign("vendor", "UNUSUAL_AMOUNT", False,
+                          f"This bill is {inr(total)}; {v['name']}'s bills are usually about {inr(usual)}. A much bigger bill than usual "
+                          "is worth a second look.", short=f"Much bigger than {v['name']}'s usual bills (about {inr(usual)}).")
         self._cash_check(v)
         d, cap = self.ctx.get("date"), self.policy["small_supplier_month_cap_inr"]
         if d:
@@ -443,18 +527,30 @@ class Run:
 
     def _cash_check(self, v):
         """A big bill with no way to pay electronically would have to be paid in cash, and cash over
-        Rs 10,000 a day to one person isn't allowed as a business expense (Income Tax Act, s. 40A(3)).
+        Rs 10,000 a day to one person isn't allowed as a business expense (income-tax rules, old section 40A(3)).
         The limit is per day, so bills from the same supplier on the same day are added up."""
         f, limit = self.ctx["f"], self.policy["cash_limit_inr"]
-        has_bank = (v and (v["bank_account"] or v.get("upi"))) or f.get("bank_account") or f.get("vendor_upi")
+        if self.ctx.get("paid_at_counter"):
+            # already paid by our staff: what matters is how they paid
+            has_bank = (f.get("payment_mode") or "cash").lower() != "cash"
+        else:
+            has_bank = (v and (v["bank_account"] or v.get("upi"))) or f.get("bank_account") or f.get("vendor_upi")
         total = self.ctx.get("total") or 0
         others = self._same_day(v)
         day = total + sum(h["total"] or 0 for h in others)
+        law = "isn't allowed as a business expense under the income-tax rules on cash payments (old section 40A(3))"
+        if not has_bank and day > limit and self.ctx.get("paid_at_counter"):
+            self.flag("vendor", "HOLD", "CASH_LIMIT",
+                      f"The bill shows {inr(day if others else total)} was paid in cash at the counter. Paying more than {inr(limit)} in cash "
+                      f"to one person in a day {law}, so the company can't count it as an expense.",
+                      audience="internal", action="Ask accounts how to book it, and pay this shop by UPI from now on.",
+                      short=f"{inr(total)} was paid in cash at the counter; over {inr(limit)} a day, cash can't be claimed as an expense.")
+            return
         if not has_bank and day > limit:
             together = f" Together with {len(others)} other bill{'s' if len(others) > 1 else ''} from the same day, that's {inr(day)}." if others else ""
             self.flag("vendor", "HOLD", "CASH_LIMIT",
                       f"There are no bank or UPI details for this {inr(total)} bill.{together} Paying more than {inr(limit)} in cash to "
-                      "one person in a day isn't allowed as a business expense (Income Tax Act, section 40A(3)).",
+                      f"one person in a day {law}.",
                       audience="vendor", action="Get the supplier's bank account or UPI ID and pay electronically.",
                       short=(f"{inr(day)} to one supplier on one day with no bank or UPI details; over {inr(limit)} it can't be paid in cash."
                              if others else f"No bank or UPI details for a {inr(total)} bill; over {inr(limit)} it can't be paid in cash."),
@@ -479,12 +575,16 @@ class Run:
         checks.append(dict(label="Correct type of GST charged", ok=ok_type,
                            detail=f"{why} → should be {expected}; invoice charges {charged}"))
         if not ok_type:
-            self.flag("gst", "HOLD", "WRONG_TAX_TYPE",
-                      f"The vendor charged {charged}, but this is an {'intra' if intra else 'inter'}-state supply "
-                      f"({why}), so it must be {expected}. The total looks right, but we could not claim "
-                      "input tax credit on a wrongly-charged tax.",
+            ours = self.buyer.get("state") or "our state"
+            theirs = (v or {}).get("state") or "their state"
+            where = (f"both we and {v['name'] if v else 'the supplier'} are in {ours}" if intra else
+                     f"{v['name'] if v else 'the supplier'} is in {theirs} and we're in {ours}")
+            plain = ("Within one state, GST is split into CGST + SGST; between two states it's a single IGST. "
+                     f"Here {where}, so it should be {expected}, but the invoice charges {charged}. The total looks right, "
+                     "but tax charged under the wrong head can't be claimed back, so we'd lose the GST credit.")
+            self.flag("gst", "HOLD", "WRONG_TAX_TYPE", plain,
                       audience="vendor", action=f"Ask the vendor to cancel this invoice and reissue it with {expected}.",
-                      short=f"Wrong GST type: {charged} charged on an {'intra' if intra else 'inter'}-state supply, should be {expected}.",
+                      short=f"Wrong kind of GST: {charged} charged, but {where}, so it should be {expected}.",
                       vendor_msg=f"This invoice charges {charged}, but {'both your registration and the place of supply are in the same state' if intra else 'your registration and the place of supply are in different states'} "
                                  f"({why}), so {expected} applies. We can't claim input tax credit on tax charged under the wrong head, "
                                  f"so please cancel this invoice and issue a fresh one with {expected}.")
@@ -629,7 +729,11 @@ class Run:
                           short=f"Same supplier, date and amount ({inr(self.ctx['total'])}) as a bill already in records.")
                 return "Possible duplicate", checks, {}
             return "Not in records yet", checks, {}
-        same_no = [h for h in past if h["invoice_serial"] == serial and h["financial_year"] == fy]
+        small = not v["gstin"]
+        book = self.ctx["book"] = book_of(f, serial) if small else None
+        # two bill books can both have a page 12, so a small shop's numbers only clash within one book
+        same_no = [h for h in past if h["invoice_serial"] == serial and h["financial_year"] == fy
+                   and (not small or (h.get("book") or book) == book)]
         checks = [dict(label="Fingerprint", ok=None,
                        detail=f"vendor {v['vendor_id']} · FY {fy} · serial {serial} · total {inr(self.ctx['total'])}"
                               f"  (printed as '{f.get('invoice_number')}')"),
@@ -659,22 +763,8 @@ class Run:
                       audience="vendor", action="Ask the vendor whether this replaces the earlier invoice.",
                       short=f"Invoice number {h['invoice_number']} was already used for {inr(h['total'])}; this one is {inr(self.ctx['total'])}.")
             return "Invoice number reused", checks, {}
-        if not v["gstin"] and d:
-            # bill-book pages are numbered in order: a lower number dated after a higher one suggests a second bill book
-            ahead = [h for h in past if h["invoice_serial"] is not None and h["invoice_serial"] > serial
-                     and h["invoice_date"] and h["invoice_date"] < d.isoformat()]
-            checks.append(dict(label="Bill number follows the earlier ones", ok=not ahead,
-                               detail=(f"no. {serial} dated {d}, but no. {ahead[0]['invoice_serial']} was dated {ahead[0]['invoice_date']}"
-                                       if ahead else "in order with the bills in records")))
-            if ahead:
-                h = max(ahead, key=lambda x: x["invoice_serial"])
-                hd = date.fromisoformat(h["invoice_date"]).strftime("%d %b %Y").lstrip("0")
-                self.flag("duplicate", "HOLD", "SERIAL_BACKWARDS",
-                          f"This is bill no. {f.get('invoice_number')}, dated {d.strftime('%d %b %Y').lstrip('0')}, but {v['name']} already gave us "
-                          f"bill no. {h['invoice_number']} on {hd}. Bill-book numbers only go up, so this bill may come from a second bill book.",
-                          audience="internal",
-                          action=f"Call {v['name']} on {v['phone']} (the number on file) and ask whether they issued this bill.",
-                          short=f"Bill no. {f.get('invoice_number')} is lower than no. {h['invoice_number']}, which {v['name']} gave us earlier ({hd}).")
+        if small and d:
+            self._bill_book_checks(v, f, serial, fy, book, past, checks)
         po = self.ctx.get("po")
         near = [h for h in past if po and h["po_number"] == po["po_number"] and h["decision"] != "REJECT"
                 and abs(h["total"] - self.ctx["total"]) <= 1 and d and h["invoice_date"]
@@ -689,6 +779,37 @@ class Run:
                       audience="internal", action="AP clerk to confirm these are two separate supplies.",
                       short=f"Same order and amount as {near[0]['invoice_number']}, under a new number: possibly sent twice.")
         return "Not in records yet" if not near else "Possible duplicate", checks, {}
+
+    def _bill_book_checks(self, v, f, serial, fy, book, past, checks):
+        """Bill-book pages are used in order, and numbering usually starts again in April.
+        So numbers are only compared within the same book and the same financial year."""
+        d = self.ctx["date"]
+        this_year = [h for h in past if h["financial_year"] == fy and h["invoice_serial"] is not None]
+        same_book = [h for h in this_year if (h.get("book") or book) == book]
+        ahead = [h for h in same_book if h["invoice_serial"] > serial and h["invoice_date"] and h["invoice_date"] < d.isoformat()]
+        books = {h.get("book") for h in this_year if h.get("book")} | {book}
+        checks.append(dict(label="Bill number follows the earlier ones from this book", ok=not ahead,
+                           detail=(f"{book}, FY {fy}: no. {serial} comes after no. {max(h['invoice_serial'] for h in ahead)}"
+                                   if ahead else f"{book}, FY {fy}" + (", first bill from this book" if this_year and not same_book else ""))))
+        if ahead:
+            h = max(ahead, key=lambda x: x["invoice_serial"])
+            hd = date.fromisoformat(h["invoice_date"]).strftime("%d %b %Y").lstrip("0")
+            self.sign("duplicate", "SERIAL_BACKWARDS", True,
+                      f"This is bill no. {f.get('invoice_number')}, dated {d.strftime('%d %b %Y').lstrip('0')}. But {v['name']} gave us bill "
+                      f"no. {h['invoice_number']} from the same bill book on {hd}. A bill book's pages are used in order, so a lower number "
+                      "can't come later. This page may have been kept back, or the bill may not be from them.",
+                      short=f"Bill no. {f.get('invoice_number')} is lower than no. {h['invoice_number']}, which {v['name']} gave us earlier ({hd}) from the same bill book.",
+                      action=f"Call {v['name']} on {v['phone']}, the number we have, and ask whether they wrote this bill.")
+        elif this_year and not same_book:
+            self.sign("duplicate", "NEW_BILL_BOOK", False,
+                      f"This bill is from a different bill book than {v['name']}'s earlier bills this year ({book}). Many shops use two "
+                      "books at once, for cash and credit or for two counters, so on its own that's normal.",
+                      short=f"From another of {v['name']}'s bill books ({book}).")
+        if len(books) >= 3:
+            self.sign("duplicate", "MANY_BILL_BOOKS", False,
+                      f"{v['name']} has now used {len(books)} different bill books this year. A small shop rarely needs that many; a "
+                      "spare book in the wrong hands is one way fake bills are made.",
+                      short=f"{len(books)} different bill books from {v['name']} this year.")
 
     def s_match(self):
         f, po = self.ctx["f"], self.ctx.get("po")
@@ -803,15 +924,34 @@ class Run:
         why = [w for w, yes in (("from a supplier without a GSTIN", self.ctx.get("unregistered")),
                                 ("written by hand", f.get("written_by_hand")),
                                 ("bought without a purchase order", v and not self.ctx.get("po"))) if yes]
+        self.ctx["small_lane"] = bool(why)
         if sev <= 1 and why:
             # a bill like this is easy to make up, so it's never paid on the bill alone
-            checks.append(dict(label="Goods received, confirmed by the buyer", ok=False, detail="waiting for the buyer"))
-            self.flag("decide", "HOLD", "BUYER_CONFIRM",
-                      f"Everything on the bill checks out, but it's {' and '.join(why)}, so it isn't paid on the bill alone: "
-                      "the person who made the purchase confirms the goods arrived.",
-                      action="The person who made the purchase presses Confirm received.",
-                      short=f"Ready to pay {inr(total)} to {v['name']}, once the buyer confirms the goods arrived.")
-            sev = 2
+            name = v["name"]
+            verb = f"repay {inr(total)} spent at {name}" if self.ctx.get("paid_at_counter") else f"pay {inr(total)} to {name}"
+            minor = [x["text"].rstrip(".") for x in self.signs if not x["serious"]]
+            if len(minor) >= 3:
+                self.flag("decide", "HOLD", "SEVERAL_SIGNS",
+                          f"{len(minor)} small things look off on this bill: " + "; ".join(m[0].lower() + m[1:] for m in minor) +
+                          ". Each could be innocent, but together they're too many to explain away.",
+                          audience="internal",
+                          action=f"Call {name} on {v['phone']}, the number we have, and go through each point before deciding.",
+                          short=f"{len(minor)} small things look off on this bill, so it's held for a closer look.")
+            else:
+                call = len(minor) == 2
+                self.ctx["needs_call"] = call
+                checks.append(dict(label="Goods received, confirmed by the buyer", ok=False,
+                                   detail="waiting for the buyer" + (", and a call to the shop" if call else "")))
+                self.flag("decide", "HOLD", "BUYER_CONFIRM",
+                          f"Everything on the bill checks out, but it's {', '.join(why[:-1]) + ' and ' + why[-1] if len(why) > 1 else why[0]}. Bills like this are easy to make up, so "
+                          "they're never paid on the bill alone: the person who made the purchase confirms the goods arrived."
+                          + (" Two small things look off as well, so someone also calls the shop on the number we have." if call else ""),
+                          action=("Call " + name + f" on {v['phone']} to check the bill is theirs; then " if call else "") +
+                                 ("the person who made the purchase presses Confirm received." if call else
+                                  "The person who made the purchase presses Confirm received."),
+                          short=f"Ready to {verb}, once the buyer confirms the goods arrived" +
+                                (" and someone calls the shop." if call else "."))
+            sev = max([SEVERITY[f["severity"]] for f in self.flags], default=0)
         decision = {3: "REJECT", 2: "HOLD"}.get(sev, "APPROVE")
         self.ctx["decision"] = decision
         return decision, checks, {}
@@ -838,6 +978,9 @@ class Run:
     def _pay_step(self, v, f):
         name = v["name"] if v else (f.get("vendor_name") or "the supplier")
         name = name.title() if name.isupper() else name
+        if self.ctx.get("paid_at_counter"):
+            return (f"Don't pay {name}: the bill shows it was already paid at the counter. Repay the staff member who paid, "
+                    "against this bill.")
         if v and v.get("bank_account"):
             return "Schedule payment on the vendor's terms to the account on file."
         if v and v.get("upi"):
@@ -863,7 +1006,9 @@ class Run:
         payee = v["name"] if v else (f.get("vendor_name") or "the supplier")
         payee = payee.title() if payee.isupper() else payee
         pay_headline = f"Pay {inr(self.ctx.get('total') or 0)} to {payee}"
-        pay_short = pay_headline
+        if self.ctx.get("paid_at_counter"):
+            pay_headline = pay_headline.replace("Pay ", "Repay ", 1).replace(" to ", " spent at ", 1)
+        pay_short = pay_headline.split(" (")[0]
         if info:
             # notes read as one sentence: "(hand-written bill; not a tax invoice, ...)", keeping acronyms like PO intact
             notes = [x["short"].rstrip(".") for x in info]
@@ -877,7 +1022,7 @@ class Run:
                    next_actions=list(dict.fromkeys(x["action"] for x in (
                        [y for y in blocking if y["code"] == "HANDWRITTEN_CHANGES"] or blocking + info) if x["action"])) or
                    [self._pay_step(v, f)],
-                   vendor=v and {"id": v["vendor_id"], "name": v["name"]},
+                   vendor=v and {"id": v["vendor_id"], "name": v["name"], "phone": v.get("phone")},
                    invoice=dict(number=f.get("invoice_number"), date=str(self.ctx.get("date")),
                                 po=(self.ctx.get("po") or {}).get("po_number"),
                                 po_inferred=self.ctx.get("po_inferred", False),
@@ -886,7 +1031,11 @@ class Run:
                    seen_before=self.ctx.get("seen_before") or [], sha256=self.ctx.get("sha"),
                    line_issues=self.ctx.get("line_issues") or {},
                    confirmable=bool(blocking) and all(x["code"] in CONFIRMABLE for x in blocking),
-                   pay_headline=pay_headline, pay_short=pay_short, pay_step=self._pay_step(v, f))
+                   pay_headline=pay_headline, pay_short=pay_short, pay_step=self._pay_step(v, f),
+                   signs=self.signs,
+                   needs_call=bool(self.ctx.get("needs_call")),
+                   add_phone=dict(vendor_id=v["vendor_id"], name=v["name"], phone=self.ctx["phone_on_bill"])
+                   if v and self.ctx.get("phone_unknown") else None)
         return res
 
     def commit(self, res):
@@ -894,7 +1043,7 @@ class Run:
         rec = dict(run_id=self.run_id, processed_at=datetime.now().isoformat(timespec="seconds"),
                    file=self.path.name, vendor_id=v.get("vendor_id"), vendor_name=v.get("name"),
                    invoice_number=res["invoice"]["number"], invoice_serial=self.ctx.get("serial"),
-                   financial_year=self.ctx.get("fy"),
+                   financial_year=self.ctx.get("fy"), book=self.ctx.get("book"),
                    invoice_date=self.ctx["date"].isoformat() if self.ctx.get("date") else None,
                    po_number=res["invoice"]["po"], po_inferred=int(bool(res["invoice"]["po_inferred"])),
                    taxable_value=self.ctx.get("taxable"), total=self.ctx.get("total"),

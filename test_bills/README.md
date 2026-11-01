@@ -4,7 +4,7 @@ Invoices BillClerk has never seen, one problem each. Upload them on the Check pa
 
 **Before you start:** go to History and press *Clear history*, so earlier checks don't change the results.
 
-**T17, T18 and T26 come in pairs.** Upload the *a* file and press **Save to records** (for T26a, **Confirm received** first), then upload the *b* file. The *b* file is only a problem compared with the saved original.
+**T17 and T18 come in pairs.** Upload the *a* file and press **Save to records**, then upload the *b* file. The *b* file is only a problem compared with the saved original.
 
 | # | What's wrong | Should be | Why |
 |---|---|---|---|
@@ -34,20 +34,31 @@ Invoices BillClerk has never seen, one problem each. Upload them on the Check pa
 | T22 | A shop we've never bought from, small amount | **Hold** → **Pay** once confirmed | Not on the supplier list but under ₹6,000, so the person who bought it confirms rather than an outright reject. |
 | T23 | GST added by hand, but the shop has no GSTIN | **Hold** | A business that isn't registered can't charge GST (CGST Act s.32). Pay ₹3,450, not ₹4,071, or get a proper tax invoice. |
 | T24 | Shop's GST registration still in progress, no GST charged | **Hold** → **Pay** once confirmed | Correct: GST can't be charged until the GSTIN is issued. Once the buyer confirms it, it's passed; there's no bank or UPI on file, so the next step is to ask for a UPI ID. |
-| T25 | ₹38,500 with no bank details and no order | **Hold** | Over ₹10,000 it can't be paid in cash (Income Tax s.40A(3)) and there are no bank details. It's also over the ₹25,000 a month for a supplier without a GSTIN, and too big to buy without an order. |
+| T25 | ₹38,500 with no bank details and no order | **Hold** | Over ₹10,000 it can't be paid in cash (income-tax rules on cash payments) and there are no bank details. It's also over the ₹25,000 a month for a supplier without a GSTIN, and too big to buy without an order. |
 | T26a | Nothing: a normal Selvi bill, to confirm and save first | **Hold** → **Pay** once confirmed | Press Confirm received, then Save to records. Then try T26b and T27. |
 | T26b | A second bill from the same shop on the same day | **Hold** | ₹3,900 alone is fine, but with T26a (₹3,800) it's ₹7,700 on one day, over the ₹6,000 limit without an order. Splitting one purchase into small bills is the usual way round the limit. |
 | T27 | Bill number lower than an earlier bill's | **Hold** | Bill no. 0432 is dated after bill no. 0470 (T26a). Bill-book numbers only go up, so this may be from a second bill book. |
-| T28 | Selvi's name, but a different phone number | **Hold** | The bill says +91 98432 71760; Selvi's number on file is +91 98432 17760. A fake bill usually copies the name, not the number. |
+| T28 | Selvi's name, but a completely different phone number | **Hold** | The bill says +91 90036 44218; Selvi's number is +91 98432 17760. A fake bill usually copies the name, not the number. If Selvi confirms by phone that it's their second number, add it to their file and check again. |
+| T29 | Selvi's phone number with two digits swapped | **Hold** → **Pay** once confirmed | 71760 instead of 17760 is a writing slip, not a sign of fraud. It's noted, the buyer confirms as usual, and payment still goes only to Selvi's UPI ID on file. |
+| T30a | Nothing: a March bill with a high number, to confirm and save first | **Hold** → **Pay** once confirmed | Press Confirm received, then Save to records. Then try T30b. |
+| T30b | Bill no. 0004 in April, after no. 0985 in March | **Hold** → **Pay** once confirmed | Not a problem: shops start a new bill book in April, with the new financial year. Numbers are only compared within one year. |
+| T31 | Bill no. 0118 from Selvi's second bill book | **Hold** → **Pay** once confirmed | 0118 is in a different book (pages 0101-0200) from T26a's 0470. Many shops use two books at once, so it's only noted, and the buyer confirms as usual. |
+| T32 | ₹3,800 in figures, 'three thousand two hundred' in words | **Hold** | Figures are easy to change (a 2 into an 8); words aren't. Whichever is right, the shop has to confirm it. |
+| T33 | Cash memo marked 'PAID - Cash, Received with thanks' | **Hold** → **Pay** once confirmed | Our staff already paid at the counter. Paying Selvi again would pay twice, so once confirmed, the step is to repay the staff member who paid. |
+| T34 | A second bill book and a phone typo on the same bill | **Hold** → **Pay** once confirmed | Each would only be noted on its own. Two together are worth a phone call, so Confirm received also asks someone to call Selvi on the number we have. |
 
-**T21 to T28 are from small local suppliers** of the kind every garment unit buys from: a thread shop with a hand-written bill book, a tailoring-supplies shop whose GST registration is still being processed. They have no GSTIN, so different safeguards apply:
+**T21 to T34 are from small local shops** of the kind every garment unit buys from: a thread shop with a hand-written bill book, a tailoring-supplies shop whose GST registration is still being processed. There's little on their bills BillClerk can prove, so it makes sure of three things (the goods arrived, the money goes only to the shop's UPI ID or account on file, nothing is paid twice or too much) and counts what looks off:
 
-- Even a correct bill isn't paid on the bill alone. It waits for the buyer: type a name and press **Confirm received**, and it's passed for payment (by UPI where the shop has one).
-- Bills from the same shop on the same day are added up, so one purchase split into small bills is caught (T26b).
-- Bill-book numbers must go up (T27), and the phone number must match the one on file (T28).
-- More than ₹25,000 a month from one such shop, or more than ₹10,000 a day with no bank or UPI details, is held (T25).
+- **Nothing, or one small thing** (a phone typo, a second bill book): the buyer types their name and presses **Confirm received**, and it's passed.
+- **Two small things** (T34): the buyer confirms, and also ticks that they called the shop on the number on file.
+- **Three small things, or one serious one** (a different phone number, a bill number going backwards in the same book, words not matching figures): held.
 
-**T26a is the original for T26b and T27.** Upload it, press **Confirm received**, then **Save to records**. Then try T26b and T27.
+**Some bills need another saved first**, because they're only a problem (or only fine) next to it:
+
+- **T26a** is the original for T26b, T27, T31 and T34: upload it, press **Confirm received**, then **Save to records**.
+- **T30a** is the original for T30b: the same steps.
+
+**T28** has a completely different phone number. If you pretend you've called Selvi and they said it's theirs, type your name under "Is this their second number?" and the bill is checked again, this time as a normal small-shop bill.
 
 T07 is dated 15 January 2027, so it only counts as "in the future" until then. T08 is caught twice: it's over a year old, and it's dated before the order it quotes.
 

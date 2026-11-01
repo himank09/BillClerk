@@ -50,6 +50,11 @@ class Invoice(BaseModel):
     gst_registration: str | None = Field(None, description="'registered' if a GSTIN is printed, 'applied' if it says GST applied for "
                                          "or shows a GST application number (ARN), 'none' otherwise")
     gst_arn: str | None = Field(None, description="GST application reference number (ARN), if printed")
+    bill_book_no: str | None = Field(None, description="Bill-book number or series printed on a bill-book page (e.g. 'Book No. 12'), if any")
+    amount_in_words: str | None = Field(None, description="The total written in words, exactly as written (e.g. 'Rupees Three Thousand Eight Hundred only')")
+    paid_status: str | None = Field(None, description="'paid' if the bill is marked as already paid (PAID, Received with thanks, cash received), "
+                                    "'credit' if marked as a credit bill, otherwise null")
+    payment_mode: str | None = Field(None, description="How it was paid, if the bill says: 'cash', 'upi', 'card' or 'bank'")
     buyer_name: str | None = None
     buyer_gstin: str | None = None
     invoice_number: str | None = None
@@ -95,6 +100,9 @@ Rules:
   confidence for any value that is hard to read.
 - Copy the supplier's phone number, UPI ID and address if printed. If there is no GSTIN, set vendor_gstin to null and
   say in gst_registration whether GST registration is applied for (copy the ARN into gst_arn) or not mentioned.
+- Copy the total in words exactly as written, if it is there. Note a printed bill-book number or series.
+- If the bill is marked as already paid (PAID, Received with thanks, cash received), set paid_status to 'paid'
+  and payment_mode to how it was paid; if "Credit" is ticked or written, set paid_status to 'credit'.
 - A bill without a bill number, PO, or line-wise GST is fine: leave those fields null rather than guessing.
 - confidence: for each listed field, 0-1, how sure you are you read it correctly
   (lower it for blurry scans, handwriting, or anything you had to infer)."""

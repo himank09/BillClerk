@@ -113,6 +113,15 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
 .result .word { font-size: 0.85rem; font-weight: 700; opacity: 0.92; }
 .result h2 { font-size: 1.22rem; font-weight: 700; }
 .result .also { margin: 0.35rem 0 0; padding-left: 1.1rem; font-size: 0.92rem; opacity: .92; }
+.result h2 a.reason.big { color: inherit; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: rgba(255,255,255,.5); }
+.result h2 a.reason.big::after { content: " ↗"; font-size: 0.8em; opacity: .8; }
+.result .reasons { margin: 0.5rem 0 0; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; font-size: 0.9rem; }
+.result .reasons a.reason { color: #fff; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); border-radius: 99px; padding: 0.15rem 0.65rem; text-decoration: none; font-weight: 600; }
+.result .reasons a.reason:hover { background: rgba(255,255,255,.3); }
+.result .reasons a.reason.note { font-weight: 500; background: transparent; }
+.result .reasons a.reason::after { content: " ↗"; opacity: .75; }
+.result .hint { margin: 0.45rem 0 0; font-size: 0.8rem; opacity: .75; }
+.result .reasons .done { font-weight: 600; }
 .result .also li { margin: 0.1rem 0; }
 .result .next { margin-top: 0.55rem; font-size: 0.95rem; opacity: .9; max-width: 60ch; }
 .result .body { padding: 0.8rem 1.25rem; }
@@ -130,6 +139,9 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
 .confirm input { flex: 1 1 14rem; font: inherit; padding: 0.55rem 0.75rem; border: 1px solid #C9D1DA; border-radius: 8px; }
 .confirm input:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus); }
 .confirm p { margin: 0.45rem 0 0; }
+.confirm p.muted { margin: 0 0 0.6rem; }
+.confirm .tick { display: flex; gap: 0.5rem; align-items: flex-start; font-weight: 500; margin-top: 0.7rem; }
+.confirm .tick input { margin-top: 0.25rem; width: 18px; height: 18px; flex: none; }
 .emails { margin-top: 0.9rem; }
 .email { background: var(--paper); border-radius: 10px; padding: 0.8rem 0.95rem; margin-top: 0.5rem; }
 .email .sub { font-weight: 700; }
@@ -330,13 +342,23 @@ tr.click { cursor: pointer; } tr.click:hover { background: #FAFAFF; }
 .rules section { background: var(--white); border-radius: var(--radius); padding: 1.1rem 1.25rem; border: 1px solid var(--line-faint); border-top: 5px solid var(--hold); }
 .rules section.rej { border-top-color: var(--reject); }
 .rules section.ass { border-top-color: var(--violet); grid-column: 1 / -1; }
+.rules section.book { grid-column: 1 / -1; border-top-color: var(--line); }
+.rules .book .lead { margin: 0 0 0.75rem; max-width: 62rem; }
+.rules .arts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 1.5rem; }
+.rules article { padding: 0.65rem 0.75rem; border-radius: 10px; scroll-margin-top: 90px; transition: background .4s; }
+.rules article.lit { background: #FFF4C9; box-shadow: 0 0 0 2px #E8C547; }
+.rules article h3 { font-size: 0.98rem; margin: 0 0 0.25rem; display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+.rules article p { margin: 0.15rem 0 0; color: var(--ink-soft); }
+.rules article .todo { color: var(--ink); font-size: 0.92rem; }
+.rules .out { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 0.08rem 0.45rem; border-radius: 99px; background: var(--line-faint); color: var(--ink-soft); }
+.rules .out.HOLD { background: var(--hold-bg); color: var(--hold); }
+.rules .out.REJECT { background: var(--reject-bg); color: var(--reject); }
+.rules .out.CONFIRM { background: #ECEAFB; color: var(--violet); }
 .rules h2 { font-size: 1.05rem; }
 .rules dl { margin: 0; }
 .rules dt { font-weight: 700; margin-top: 0.75rem; }
 .rules dd { margin: 0.1rem 0 0; color: var(--ink-soft); }
 .rules .ass dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1.25rem; }
-.rules section.small { border-top-color: var(--hold); }
-.rules .small dl { grid-template-columns: repeat(4, 1fr); gap: 0.4rem 1.25rem; }
 .meter { height: 7px; background: var(--line-faint); border-radius: 4px; overflow: hidden; margin-top: 0.3rem; min-width: 90px; }
 .meter i { display: block; height: 100%; background: var(--violet); }
 .meter.over i { background: var(--reject); }
@@ -367,7 +389,7 @@ h2.table-h { font-size: 1.1rem; margin: 2rem 0 0.6rem; }
   .step .sum { grid-column: 2; font-size: 0.88rem; }
   .detail { margin-left: 0; }
   .progress { margin-left: 2.2rem; }
-  .rules, .rules .ass dl, .rules .small dl, .drawer .two { grid-template-columns: 1fr; }
+  .rules, .rules .ass dl, .rules .arts, .drawer .two { grid-template-columns: 1fr; }
   .table-wrap { display: none; }
   .cards { display: grid; gap: 0.6rem; }
   .card { background: var(--white); border: 1px solid var(--line-faint); border-radius: 12px; padding: 0.8rem 0.9rem; text-align: left; width: 100%; display: grid; gap: 0.25rem; }
@@ -742,24 +764,171 @@ function renderRead(el, d) {
       <span class="total">Total</span><b class="total">${inr(inv.total)}</b></div>
   </section>`;
 }
+/* the rule book: every reason BillClerk can give, in plain words. The result card shows the
+   short label; the Rules page explains it. codes: the findings in app/checks.py it covers */
+const RULEBOOK = [
+  { group: "The file", rules: [
+    { id: "not-invoice", title: "It isn't an invoice we can open", outcome: "Rejected", codes: { NOT_AN_INVOICE: "Not an invoice", NOT_A_PDF: "Wrong kind of file", UNREADABLE_FILE: "File can't be opened" },
+      why: () => "A CV, a quotation, a report, or an empty or damaged file. There's nothing to pay on it.",
+      next: () => "Take it out of the invoice queue, or ask the sender for a proper copy." },
+    { id: "unreadable", title: "Some details couldn't be read", outcome: "Held", codes: { EXTRACTION_FAILED: "Couldn't read it", LOW_CONFIDENCE: "Hard to read", MISSING_FIELD: "Details missing", BAD_DATE: "Date unclear", BUYER_GSTIN_UNREADABLE: "Our GSTIN unclear" },
+      why: () => "A detail is missing, blurred or smudged. With money involved, a person looks rather than BillClerk guessing.",
+      next: () => "Check the details against the file, or ask the supplier for a clearer copy." } ] },
+  { group: "The bill itself", rules: [
+    { id: "add-up", title: "The numbers don't add up", outcome: "Held", codes: { ARITHMETIC: "Numbers don't add up" },
+      why: () => "Each line's quantity × rate, and the lines plus GST, must come to the total printed. If they don't, one of the numbers is wrong, and we can't tell which.",
+      next: () => "Ask the supplier for a corrected bill." },
+    { id: "words", title: "The amount in words doesn't match the figures", outcome: "Held", codes: { AMOUNT_WORDS: "Words ≠ figures" },
+      why: () => "Figures are easy to change after a bill is written (a 3 becomes an 8). Words aren't. When they disagree, someone may have changed the amount.",
+      next: () => "Ask the supplier which amount is right, and get a corrected bill." },
+    { id: "pen", title: "A printed invoice was changed by hand", outcome: "Held", codes: { HANDWRITTEN_CHANGES: "Changed by hand" },
+      why: () => "A GST invoice can't be corrected with a pen. Lines or totals written in later can't be trusted or claimed.",
+      next: () => "Ask for a revised invoice, or a debit note for anything extra." },
+    { id: "date", title: "The date is odd", outcome: "Held", codes: { FUTURE_DATE: "Dated in the future", STALE_INVOICE: "Over a year old", INVOICE_BEFORE_PO: "Dated before the order" },
+      why: () => "A bill dated in the future, more than a year ago, or before the order it's for may have been backdated or reused.",
+      next: () => "Check the date with the supplier, and why it's arriving now." },
+    { id: "not-us", title: "It's made out to another company", outcome: "Rejected", codes: { WRONG_BUYER: "Not billed to us" },
+      why: () => "We can only pay, and claim GST on, bills made out to us.",
+      next: () => "Send it back to the supplier." } ] },
+  { group: "The supplier", rules: [
+    { id: "unknown", title: "The supplier isn't one of ours", outcome: "Rejected", codes: { UNKNOWN_VENDOR: "Unknown supplier" },
+      why: () => "Only suppliers that have been checked and set up can be paid. Paying anyone else is how fake suppliers get money.",
+      next: () => "Send it to procurement to set the supplier up first." },
+    { id: "blocked", title: "The supplier is blocked", outcome: "Rejected", codes: { VENDOR_BLOCKED: "Supplier blocked" },
+      why: () => "The supplier failed a check (for example the yearly KYC), so nothing is paid until that's sorted.",
+      next: () => "Don't pay. Let the supplier know and involve procurement." },
+    { id: "gstin", title: "Something's wrong with the GSTIN", outcome: "Held", codes: { INVALID_GSTIN: "GSTIN not valid", GSTIN_NOT_ON_FILE: "GSTIN not theirs" },
+      why: () => "Every GSTIN ends in a check digit, so a wrong one can be spotted. And a supplier's bill must carry the GSTIN we have for them.",
+      next: () => "Check the GSTIN on the bill and on the GST portal." },
+    { id: "bank", title: "The bank account has changed", outcome: "Held", codes: { BANK_CHANGED: "Bank account changed" },
+      why: () => "A bill asking to be paid into a new account is the most common invoice fraud: someone pretends to be the supplier.",
+      next: () => "Call the supplier on the number we already have (never one from the bill or an email) before paying." },
+    { id: "bank-new", title: "Bank details taken from the bill", outcome: "Note", codes: { BANK_FROM_BILL: "Bank details from the bill" },
+      why: () => "We had no bank details for this supplier, so the ones on the bill are new to us.",
+      next: () => "Confirm them with the supplier by phone before the first payment." } ] },
+  { group: "GST", rules: [
+    { id: "gst-type", title: "The wrong kind of GST was charged", outcome: "Held", codes: { WRONG_TAX_TYPE: "Wrong kind of GST", CGST_SGST_UNEQUAL: "CGST and SGST unequal" },
+      why: () => "Within one state, GST is split into equal halves, CGST and SGST. Between two states it's a single IGST. Tax charged the wrong way can't be claimed back, even if the total is right.",
+      next: () => "Ask the supplier to cancel the invoice and issue a new one." },
+    { id: "gst-amount", title: "The GST amount is wrong", outcome: "Held", codes: { TAX_AMOUNT: "Wrong GST amount" },
+      why: () => "GST should be the rate printed on each line × its value. If it isn't, we'd claim the wrong amount.",
+      next: () => "Ask the supplier to correct the tax." },
+    { id: "gst-no-gstin", title: "GST charged without a GSTIN", outcome: "Held", codes: { GST_WITHOUT_GSTIN: "GST without a GSTIN" },
+      why: () => "A business that isn't registered for GST isn't allowed to charge it, and we couldn't claim it back.",
+      next: () => "Pay only the amount before GST, or ask for their GSTIN and a proper tax invoice." },
+    { id: "no-credit", title: "Not a tax invoice", outcome: "Note", codes: { NOT_TAX_INVOICE: "No GST credit", GST_APPLIED: "GST applied for" },
+      why: () => "Small shops below the GST limit, or still waiting for their GSTIN, don't charge GST. Their bills are fine; there's just no GST to claim back.",
+      next: () => "Nothing. Once a shop gets its GSTIN, ask for GST invoices." } ] },
+  { group: "The purchase order", rules: [
+    { id: "no-order", title: "The order can't be found", outcome: "Held", codes: { PO_NOT_FOUND: "Order not found", PO_UNCLEAR: "Which order?" },
+      why: () => "Every bill should match something we ordered. If the order number doesn't exist, or none of the supplier's orders clearly fits, a person decides.",
+      next: () => "Ask the supplier, or the buyer, which order it's for." },
+    { id: "order-closed", title: "The order is closed or belongs to someone else", outcome: "Rejected", codes: { PO_CLOSED: "Order closed", PO_OTHER_VENDOR: "Someone else's order" },
+      why: () => "Nothing more can be billed against a closed or cancelled order, or against another supplier's order.",
+      next: () => "Send it back to the supplier." },
+    { id: "over-order", title: "It doesn't match the order", outcome: "Held", codes: { OVER_PO: "Over the order", PO_MISMATCH: "Doesn't match the order", LINE_NOT_ON_PO: "Item not ordered" },
+      ruleText: (p, t) => `Everything saved against an order is added up. A higher price, more units than ordered, an item that wasn't ordered, or a total more than ${t.percent}% or ${inr(t.absolute_inr)} over (whichever is less) is held.`,
+      next: () => "Ask the supplier to correct the bill, or the buyer to change the order." },
+    { id: "tolerance", title: "A small difference from the order", outcome: "Note", codes: { WITHIN_TOLERANCE: "Small difference" },
+      ruleText: (p, t) => `Up to ${t.percent}% or ${inr(t.absolute_inr)} over the order (whichever is less) isn't worth holding a payment for. It's noted instead.`,
+      next: () => "Nothing." },
+    { id: "order-found", title: "The order was worked out", outcome: "Note", codes: { PO_INFERRED: "Order worked out" },
+      ruleText: (p) => `The bill didn't quote an order number, but its items clearly match one open order (we must be at least ${Math.round(p.po_inference_min_confidence * 100)}% sure).`,
+      next: () => "Ask the supplier to quote our order number next time." },
+    { id: "manager", title: "Big amounts need a manager", outcome: "Held", codes: { APPROVAL_LIMIT: "Needs a manager" },
+      ruleText: (p) => `Anything over ${inr(p.approval_limit_inr)} is signed off by the finance manager, however correct it is.`,
+      next: () => "Send it to the finance manager." } ] },
+  { group: "Paying twice", rules: [
+    { id: "duplicate", title: "It's already in our records", outcome: "Rejected", codes: { DUPLICATE: "Duplicate" },
+      why: () => "Same supplier, same invoice number in the same financial year, same amount, however the number or date is written. Paying it again would pay twice.",
+      next: () => "Don't pay. Tell the supplier it's already being processed." },
+    { id: "maybe-twice", title: "It might have been sent twice", outcome: "Held", codes: { NUMBER_REUSED: "Number used before", POSSIBLE_DUPLICATE: "Maybe sent twice" },
+      why: () => "An invoice number used before for a different amount, or the same order and amount under a new number. Both are how double payments slip through.",
+      next: () => "Check with the supplier whether these are two separate supplies." } ] },
+  { group: "Small shops without a GSTIN", intro: true, rules: [
+    { id: "buyer-confirms", title: "The buyer confirms the goods arrived", outcome: "Buyer confirms", codes: { BUYER_CONFIRM: "Buyer confirms first", NEW_SMALL_SUPPLIER: "New shop" },
+      why: () => "There's little on a small shop's bill we can prove, and hand-written bills are easy to make up. So they're never paid on the bill alone: whoever bought the goods confirms they arrived, and their name goes into the audit trail. If two small warning signs show up, someone also calls the shop on the number we have.",
+      next: () => "The buyer types their name and presses Confirm received." },
+    { id: "signs", title: "Too many warning signs", outcome: "Held", codes: { SEVERAL_SIGNS: "Too many warning signs" },
+      why: () => "Each small sign on its own is usually an innocent mistake. Three at once are too many to explain away.",
+      next: () => "Call the shop on the number we have and go through each point." },
+    { id: "phone", title: "The phone number doesn't match", outcome: "Small sign, or held", codes: { PHONE_TYPO: "Phone number typo", PHONE_DIFFERENT: "Different phone number" },
+      why: () => "With no GSTIN, a shop is known by its phone number. One wrong or swapped digit is a writing slip, so it's only a small sign. A completely different number is serious: a fake bill usually copies a shop's name, not its number. It might also be the shop's second number.",
+      next: () => "Call the shop on the number we have. If the other number is theirs too, add it to their file." },
+    { id: "bill-books", title: "Bill-book numbers", outcome: "Small sign, or held", codes: { NEW_BILL_BOOK: "Second bill book", MANY_BILL_BOOKS: "Many bill books", SERIAL_BACKWARDS: "Bill number goes back" },
+      why: () => "A bill book's pages are used in order, and most shops start a new book in April. Many shops use two books at once, so a bill from another book is only a small sign, and three or more books in a year is another. But a lower number than an earlier bill from the same book, in the same year, can't happen honestly: that's held.",
+      next: () => "Call the shop on the number we have and ask whether they wrote this bill." },
+    { id: "unusual", title: "Much bigger than usual", outcome: "Small sign", codes: { UNUSUAL_AMOUNT: "Bigger than usual" },
+      why: () => "A bill three times bigger than a shop's usual ones is worth a second look.",
+      next: () => "The buyer confirms as usual." },
+    { id: "no-order-needed", title: "Small buys don't need an order", outcome: "Note", codes: { PETTY_NO_PO: "No order needed" },
+      ruleText: (p) => `Up to ${inr(p.petty_limit_inr)} a day from one shop can be bought without a purchase order.`,
+      next: () => "Nothing." },
+    { id: "split", title: "One purchase split into small bills", outcome: "Held", codes: { SPLIT_BILLS: "Split bills" },
+      ruleText: (p) => `Bills from one shop on the same day are added up. If together they're over ${inr(p.petty_limit_inr)}, it should have been one order: splitting it is the usual way round the limit.`,
+      next: () => "Ask the buyer why; if it was one purchase, raise an order for all of it." },
+    { id: "monthly", title: "Over the monthly limit", outcome: "Held", codes: { MONTHLY_CAP: "Monthly limit" },
+      ruleText: (p) => `More than ${inr(p.small_supplier_month_cap_inr)} a month from one small shop means we buy from them regularly, so they should be set up properly: orders, bank details and KYC.`,
+      next: () => "Procurement sets the shop up as a regular supplier." },
+    { id: "cash", title: "Too much in cash", outcome: "Held", codes: { CASH_LIMIT: "Too much in cash" },
+      ruleText: (p) => `Paying more than ${inr(p.cash_limit_inr)} in cash to one person in a day can't be counted as a business expense (income-tax rules on cash payments). Bills from the same day are added up.`,
+      next: () => "Get the shop's UPI ID or bank account and pay that way." },
+    { id: "paid", title: "Already paid at the counter", outcome: "Note", codes: { PAID_AT_COUNTER: "Already paid" },
+      why: () => "A bill marked PAID or 'Received with thanks' means our staff already paid the shop. Paying the shop again would pay twice.",
+      next: () => "Repay the staff member who paid, against this bill." },
+    { id: "handwritten", title: "A hand-written bill", outcome: "Note", codes: { HANDWRITTEN_BILL: "Hand-written bill" },
+      why: () => "Bill books and cash memos are normal for small shops. It's a valid bill; it just goes through the small-shop checks.",
+      next: () => "Nothing." } ] },
+];
+const RULE_OF = {};  // finding code -> { id, label }
+RULEBOOK.forEach(g => g.rules.forEach(r => Object.entries(r.codes).forEach(([c, label]) => RULE_OF[c] = { id: r.id, label })));
+let pendingRule = null;
+function openRule(id) { pendingRule = id; closeDrawer(); show("rules"); }
+function reasonLink(code, cls) {
+  const r = RULE_OF[code]; if (!r) return "";
+  return `<a class="reason ${cls || ""}" href="#rule-${r.id}" data-rule="${r.id}">${esc(r.label)}</a>`;
+}
+
 function renderResult(el, d, inDrawer) {
-  const blocking = d.flags.filter(f => f.severity === "HOLD" || f.severity === "REJECT");
-  const also = [...new Set(blocking.map(f => f.short))].filter(x => x !== d.headline);
+  // the card says what to do and, in a word or two, why; each reason links to its rule
+  const sev = { REJECT: 3, HOLD: 2, INFO: 1 };
+  const QUIET = new Set(["HANDWRITTEN_BILL", "NOT_TAX_INVOICE", "GST_APPLIED", "PETTY_NO_PO"]);  // routine for small shops: in the checks list, not the card
+  const seenRule = new Set(), reasons = [];
+  [...d.flags].sort((a, b) => sev[b.severity] - sev[a.severity]).forEach(f => {
+    const r = RULE_OF[f.code]; if (!r || seenRule.has(r.label) || !sev[f.severity] || QUIET.has(f.code)) return;
+    if (d.confirmed && (f.code === "BUYER_CONFIRM" || f.code === "NEW_SMALL_SUPPLIER")) return;
+    seenRule.add(r.label); reasons.push({ code: f.code, severity: f.severity });
+  });
+  const blockers = reasons.filter(r => r.severity !== "INFO"), notes = reasons.filter(r => r.severity === "INFO");
+  const lc = x => x ? x[0].toLowerCase() + x.slice(1) : x;
+  const title = d.decision === "APPROVE" ? (d.pay_short || d.headline)
+    : d.confirmable ? `Ready to ${lc(d.pay_short || "pay")}` : null;
+  const lead = title ? `<h2>${esc(title)}</h2>`
+    : `<h2>${blockers.length ? reasonLink(blockers[0].code, "big") : esc(d.headline)}</h2>`;
+  const chips = (title ? blockers : blockers.slice(1)).concat(notes);
   const next = d.next_actions[0];
   const canSave = d.decision !== "REJECT" && !d.confirmable;  // a small supplier's bill is confirmed before it's saved
   const mailLabel = n => `Draft email${n > 1 ? "s" : ""}`;
   const seen = (d.seen_before || [])[0];
   el.innerHTML = `<div class="result ${d.decision}">
     <div class="band"><span class="badge" aria-hidden="true">${BADGE[d.decision]}</span><div>
-      <div class="word">${d.confirmable ? "Needs the buyer's OK" : WORD[d.decision]}</div><h2>${esc(d.headline)}</h2>
-      ${also.length ? `<ul class="also">${also.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
-      ${next ? `<p class="next">→ ${esc(next)}</p>` : ""}</div></div>
+      <div class="word">${d.confirmable ? "Needs the buyer's OK" : WORD[d.decision]}</div>${lead}
+      ${d.confirmed ? `<p class="reasons"><span class="done">✓ ${esc(d.confirmed.by)} confirmed the goods arrived${d.needs_call ? ", and the shop confirmed the bill" : ""}</span></p>` : ""}
+      ${chips.length ? `<p class="reasons">${title && blockers.length ? "Because: " : blockers.length > 1 || !title ? "Also: " : ""}${chips.map(c => reasonLink(c.code, c.severity === "INFO" ? "note" : "")).join("")}</p>` : ""}
+      ${next ? `<p class="next">→ ${esc(next)}</p>` : ""}
+      ${chips.length || !title ? `<p class="hint">Tap a reason to see the rule behind it.${inDrawer ? "" : " This bill's own details are in Checks below."}</p>` : ""}</div></div>
     <div class="body">
+      ${d.add_phone ? `<form class="confirm" data-addphone>
+        <label for="caller-${esc(d.run_id)}">Is ${esc(d.add_phone.phone)} their second number?</label>
+        <p class="muted small">Call ${esc(d.add_phone.name)} on ${esc(d.vendor.phone || "the number we have")} (the number we have). If they say yes, add it and the bill is checked again.</p>
+        <div class="row"><input id="caller-${esc(d.run_id)}" name="who" maxlength="60" placeholder="Who called them? e.g. Meena (accounts)" required>
+        <button class="btn">Add the number and check again</button></div></form>` : ""}
       ${d.confirmable ? `<form class="confirm" data-confirm>
         <label for="who-${esc(d.run_id)}">Who received the goods?</label>
         <div class="row"><input id="who-${esc(d.run_id)}" name="who" maxlength="60" autocomplete="name" placeholder="Name, e.g. Ravi (stores)" required>
         <button class="btn primary">Confirm received</button></div>
-        <p class="muted small">Only confirm what you've seen arrive. Your name goes into the audit trail with this bill.</p></form>` : ""}
+        ${d.needs_call ? `<label class="tick"><input type="checkbox" name="called" required> I called ${esc(d.vendor.name)} on ${esc(d.vendor.phone)}, the number we have, and they said this bill is theirs.</label>` : ""}
+        <p class="muted small">Only confirm what you've seen arrive. Your name is recorded.</p></form>` : ""}
       <div class="actions">
         ${canSave ? `<span data-save></span>` : ""}
         ${d.emails.length ? `<button class="btn" data-mail>${mailLabel(d.emails.length)}</button>` : ""}
@@ -794,11 +963,22 @@ function renderResult(el, d, inDrawer) {
     const err = el.querySelector("[data-err]"); err.hidden = true;
     const b = e.target.querySelector("button"); b.disabled = true;
     try {
-      const nd = await api(`/api/runs/${encodeURIComponent(d.run_id)}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: e.target.who.value }) });
+      const nd = await api(`/api/runs/${encodeURIComponent(d.run_id)}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: e.target.who.value, called: !!e.target.called?.checked }) });
       Object.assign(d, nd);  // the same object back/forward and the trail hold
       if (inDrawer) { renderResult(el, d, true); loadHistory(); }
       else refreshResult(d);
     } catch (x) { err.textContent = x.message; err.hidden = false; b.disabled = false; }
+  });
+  el.querySelectorAll("[data-rule]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); openRule(a.dataset.rule); }));
+  el.querySelector("[data-addphone]")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const err = el.querySelector("[data-err]"); err.hidden = true;
+    try {
+      await api(`/api/vendors/${encodeURIComponent(d.add_phone.vendor_id)}/phones`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: d.add_phone.phone, name: e.target.who.value }) });
+      if (inDrawer) closeDrawer();
+      check(d.file, plainName(d.file), `Checked again after adding ${d.add_phone.phone} to ${d.add_phone.name}'s file`);
+    } catch (x) { err.textContent = x.message; err.hidden = false; }
   });
   el.querySelector("[data-seen]")?.addEventListener("click", e => { closeDrawer(); openLog(e.target.dataset.seen); });
   el.querySelector("[data-del]")?.addEventListener("click", async e => {
@@ -1027,37 +1207,21 @@ $("#clear").onclick = async () => {
 /* rules */
 async function loadRules() {
   const s = await api("/api/setup"); const p = s.policy, t = p.tolerance;
-  $("#rules").innerHTML = `
-  <section><h2>Held for a person when</h2><dl>
-    <dt>It goes over the order</dt><dd>Everything saved against a purchase order is added up. Over by more than ${t.percent}% or ${inr(t.absolute_inr)} (whichever is smaller) and it's held. Smaller differences pass with a note.</dd>
-    <dt>It's over ${inr(p.approval_limit_inr)}</dt><dd>A finance manager signs off anything above this, however correct.</dd>
-    <dt>The bank account has changed</dt><dd>The most common invoice fraud. Call the vendor on the number already on file first.</dd>
-    <dt>The GST type is wrong</dt><dd>Same state as us means CGST + SGST, another state means IGST. Otherwise the tax credit is lost.</dd>
-    <dt>It's dated oddly</dt><dd>In the future, more than a year old, or before the order it bills against (a sign it was backdated or reused).</dd>
-    <dt>It's been changed by hand</dt><dd>A GST invoice can't be corrected with a pen; it needs a revised invoice or a debit note.</dd>
-    <dt>It can't be read, or the order can't be found</dt><dd>Missing details, or no open order matches clearly enough.</dd>
-  </dl></section>
-  <section class="rej"><h2>Rejected when</h2><dl>
-    <dt>It's already in records</dt><dd>Same vendor, invoice number, financial year and amount, however the number or date is written.</dd>
-    <dt>The vendor is blocked or unknown</dt><dd>Only approved vendors get paid.</dd>
-    <dt>The order is closed or belongs to another vendor</dt><dd>Nothing more can be billed against it.</dd>
-    <dt>It isn't an invoice</dt><dd>A CV, a report, a damaged file.</dd>
-  </dl></section>
-  <section class="ass small"><h2>Small suppliers without a GSTIN</h2><dl>
-    <div><dt>Their bills are fine</dt><dd>A bill-book or hand-written bill is valid. It isn't a tax invoice, so there's no GST credit to claim.</dd></div>
-    <div><dt>They can't charge GST</dt><dd>GST added without a GSTIN (or while registration is only applied for) is held: pay the amount before GST, or get a proper tax invoice.</dd></div>
-    <div><dt>The buyer confirms first</dt><dd>These bills are easy to make up, so they're never paid on the bill alone. Whoever bought the goods confirms they arrived, and their name goes into the audit trail.</dd></div>
-    <div><dt>Small buys don't need an order</dt><dd>Up to ${inr(p.petty_limit_inr)} a day from one supplier. Bills from the same day are added up, so one purchase split into small bills is caught.</dd></div>
-    <div><dt>Up to ${inr(p.small_supplier_month_cap_inr)} a month</dt><dd>Buying more than that from one such supplier needs a proper set-up: purchase orders, bank details and KYC.</dd></div>
-    <div><dt>The phone number must match</dt><dd>With no GSTIN, a shop is known by its phone number. A fake bill usually copies the shop's name, not its number.</dd></div>
-    <div><dt>Bill numbers only go up</dt><dd>A bill numbered lower than one the shop gave us earlier may come from a second bill book, so it's held.</dd></div>
-    <div><dt>Paid by UPI, not cash</dt><dd>Pay to the UPI ID on file, check the payee name, keep the receipt. More than ${inr(p.cash_limit_inr)} a day in cash isn't allowed as a business expense.</dd></div>
-  </dl></section>
+  const OUT = { Held: "HOLD", Rejected: "REJECT", Note: "NOTE", "Buyer confirms": "CONFIRM" };
+  $("#rules").innerHTML = RULEBOOK.map(g => `<section class="book"><h2>${esc(g.group)}</h2>
+    ${g.intro ? `<p class="lead">A small shop has no GSTIN, so there's little on its bill we can prove. So BillClerk makes sure of three things: <b>we got the goods</b> (the buyer confirms), <b>the money reaches the real shop</b> (we only pay the UPI ID or account we already have, never one written on a bill), and <b>we don't pay twice or too much</b>. Then it counts what looks off: nothing or one small sign, the buyer confirms; two small signs, someone also calls the shop; three small signs or one serious one, the bill is held.</p>` : ""}
+    <div class="arts">${g.rules.map(r => `<article id="rule-${r.id}"><h3>${esc(r.title)} <span class="out ${OUT[r.outcome] || "SIGN"}">${esc(r.outcome)}</span></h3>
+      <p>${esc(r.ruleText ? r.ruleText(p, t) : r.why())}</p>
+      <p class="todo"><b>What to do:</b> ${esc(r.next())}</p></article>`).join("")}</div></section>`).join("") + `
   <section class="ass"><h2>Assumed for this demo</h2><dl>
     <div><dt>Checked against the order</dt><dd>Not yet against goods received.</dd></div>
     <div><dt>GST at 18%</dt><dd>On every item here, for simplicity.</dd></div>
     <div><dt>${s.extractor === "mock" ? "Demo mode" : "Reading"}</dt><dd>${s.extractor === "mock" ? "Invoices are read from saved answers, not by the AI." : "Google Gemini reads each invoice once; the reading is kept, so a re-check gives the same answer."}</dd></div>
   </dl></section>`;
+  if (pendingRule) {  // opened from a reason on a result card
+    const el = document.getElementById("rule-" + pendingRule); pendingRule = null;
+    if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("lit"); setTimeout(() => el.classList.remove("lit"), 2400); }
+  }
   $("#po-table").innerHTML = `<table><thead><tr><th>PO</th><th>Vendor</th><th class="hide-sm">For</th><th class="r">Value</th><th>Billed so far</th></tr></thead><tbody>
     ${s.pos.map(o => { const pct = o.value ? o.billed / o.value * 100 : 0; const over = o.billed - o.value > Math.min(o.value * t.percent / 100, t.absolute_inr);
       return `<tr><td>${esc(o.po_number)}${o.status !== "open" ? ` <span class="muted small">(${esc(o.status)})</span>` : ""}</td><td>${esc(o.vendor)}</td><td class="hide-sm">${esc(o.description)}</td>

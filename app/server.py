@@ -245,13 +245,27 @@ async def confirm_run(run_id: str, request: Request):
     body = await request.json()
     con = records.connect()
     try:
-        res = records.confirm(con, run_id, body.get("name"))
+        res = records.confirm(con, run_id, body.get("name"), bool(body.get("called")))
         r = con.execute("SELECT saved, saved_at FROM runs WHERE run_id=?", (run_id,)).fetchone()
     except records.SaveError as e:
         raise HTTPException(409, str(e)) from None
     finally:
         con.close()
     return JSONResponse(dict(res, saved=bool(r["saved"]), saved_at=r["saved_at"]))
+
+
+@app.post("/api/vendors/{vendor_id}/phones")
+async def add_vendor_phone(vendor_id: str, request: Request):
+    """A clerk called the shop on the number we have and they confirmed a second number is theirs."""
+    body = await request.json()
+    con = records.connect()
+    try:
+        records.add_phone(con, vendor_id, body.get("phone"), body.get("name"))
+    except records.SaveError as e:
+        raise HTTPException(409, str(e)) from None
+    finally:
+        con.close()
+    return {"added": True}
 
 
 @app.post("/api/runs/{run_id}/unsave")

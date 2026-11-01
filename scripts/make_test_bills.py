@@ -205,7 +205,7 @@ def quotation():
 UNKNOWN_SHOP = dict(name="Sri Murugan Electricals", address="3, Mill Road, Tiruppur 641601", phone="+91 99940 31872")
 
 
-def bill_book(shop, bill_no, date, rows, extra=None, ink="#1B2F8A", seed=1):
+def bill_book(shop, bill_no, date, rows, extra=None, ink="#1B2F8A", seed=1, words=None, paid=False):
     """A printed bill-book page (the kind sold in any stationery shop), filled in by hand."""
     import random
     rnd = random.Random(seed)
@@ -256,6 +256,14 @@ def bill_book(shop, bill_no, date, rows, extra=None, ink="#1B2F8A", seed=1):
         hand(cols[1] + 2 * mm, y, label, 17); hand(cols[4] + 2 * mm, y, f"{amt:,}/-"); total += amt
     hand(cols[4] + 2 * mm, top - 8 * rowh + 2.5 * mm, f"{total:,}/-", 21)
     hand(R - 30 * mm, 15 * mm, "Selvi" if "Selvi" in shop["name"] else "S. Murugan", 18, "Hand2")
+    # drawn last, so bills without them come out exactly as before
+    if words:
+        c.setFillColor(red); c.setFont("Sans", 9); c.drawString(L, 41 * mm, "Rupees")
+        c.line(L + 13 * mm, 40 * mm, R, 40 * mm); c.setFillColor(mi.colors.HexColor(ink))
+        hand(L + 15 * mm, 41 * mm, words, 16)
+    if paid:   # a cash memo the shop marked as paid at the counter
+        hand(L + 4 * mm, 26 * mm, "PAID - Cash", 24, "Hand2")
+        hand(L + 4 * mm, 19 * mm, "Received with thanks", 15)
     c.showPage(); c.save()
     return buf.getvalue(), total
 
@@ -318,7 +326,7 @@ INFORMAL = [
          rows=[("Industrial fabric scissors 12 inch", 10, 1850), ("Cutting table cover (heavy)", 5, 2400), ("Pattern paper roll", 20, 400)],
          arn="AA331026047118Q",
          expected="HOLD", problem="₹38,500 with no bank details and no order",
-         why="Over ₹10,000 it can't be paid in cash (Income Tax s.40A(3)) and there are no bank details. It's also over the "
+         why="Over ₹10,000 it can't be paid in cash (income-tax rules on cash payments) and there are no bank details. It's also over the "
              "₹25,000 a month for a supplier without a GSTIN, and too big to buy without an order."),
     # T26a must be confirmed and saved first: T26b and T27 are only problems next to it
     dict(id="T26a", file="T26a_confirm_and_save_this_first.pdf", kind="book_scan", shop=SELVI, bill_no="0470", date="31/10/26", seed=261,
@@ -336,11 +344,51 @@ INFORMAL = [
          rows=[("Poly thread cones (black)", 10, 85), ("Shirt buttons (gross)", 3, 200), ("Tailor's chalk (box)", 5, 130)],
          expected="HOLD", problem="Bill number lower than an earlier bill's",
          why="Bill no. 0432 is dated after bill no. 0470 (T26a). Bill-book numbers only go up, so this may be from a second bill book."),
-    dict(id="T28", file="T28_wrong_phone_number.jpg", kind="book_photo", shop=dict(SELVI, phone="+91 98432 71760"),
+    dict(id="T28", file="T28_different_phone_number.jpg", kind="book_photo", shop=dict(SELVI, phone="+91 90036 44218"),
          bill_no="0466", date="29/10/26",
          rows=[("Poly thread cones (black)", 30, 85), ("Elastic 1 inch (roll)", 5, 200), ("Machine needles DBx1 (pkt)", 7, 100)],
-         expected="HOLD", problem="Selvi's name, but a different phone number",
-         why="The bill says +91 98432 71760; Selvi's number on file is +91 98432 17760. A fake bill usually copies the name, not the number."),
+         expected="HOLD", problem="Selvi's name, but a completely different phone number",
+         why="The bill says +91 90036 44218; Selvi's number is +91 98432 17760. A fake bill usually copies the name, not the number. "
+             "If Selvi confirms by phone that it's their second number, add it to their file and check again."),
+    dict(id="T29", file="T29_phone_number_typo.jpg", kind="book_photo", shop=dict(SELVI, phone="+91 98432 71760"),
+         bill_no="0467", date="29/10/26",
+         rows=[("Poly thread cones (black)", 30, 85), ("Elastic 1 inch (roll)", 5, 200), ("Machine needles DBx1 (pkt)", 7, 100)],
+         expected="HOLD", after_confirm="APPROVE", problem="Selvi's phone number with two digits swapped",
+         why="71760 instead of 17760 is a writing slip, not a sign of fraud. It's noted, the buyer confirms as usual, "
+             "and payment still goes only to Selvi's UPI ID on file."),
+    # T30a must be confirmed and saved first: bill books usually start again in April
+    dict(id="T30a", file="T30a_march_bill_confirm_and_save_first.pdf", kind="book_scan", shop=SELVI, bill_no="0985", date="28/03/26", seed=301,
+         rows=[("Poly thread cones (black)", 20, 85), ("Shirt buttons (gross)", 5, 200)],
+         expected="HOLD", after_confirm="APPROVE", problem="Nothing: a March bill with a high number, to confirm and save first",
+         why="Press Confirm received, then Save to records. Then try T30b."),
+    dict(id="T30b", file="T30b_april_new_book_starts_at_4.pdf", kind="book_scan", shop=SELVI, bill_no="0004", date="02/04/26", seed=302,
+         needs_first="T30a",
+         rows=[("Machine needles DBx1 (pkt)", 12, 95), ("Elastic 1 inch (roll)", 4, 200)],
+         expected="HOLD", after_confirm="APPROVE", problem="Bill no. 0004 in April, after no. 0985 in March",
+         why="Not a problem: shops start a new bill book in April, with the new financial year. Numbers are only compared within one year."),
+    dict(id="T31", file="T31_second_bill_book.pdf", kind="book_scan", shop=SELVI, bill_no="0118", date="01/11/26", seed=31,
+         needs_first="T26a",
+         rows=[("Overlock thread (pkt)", 6, 120), ("Zips 7 inch (dozen)", 4, 175)],
+         expected="HOLD", after_confirm="APPROVE", problem="Bill no. 0118 from Selvi's second bill book",
+         why="0118 is in a different book (pages 0101-0200) from T26a's 0470. Many shops use two books at once, so it's only noted, "
+             "and the buyer confirms as usual."),
+    dict(id="T32", file="T32_amount_in_words_differs.pdf", kind="book_scan", shop=SELVI, bill_no="0472", date="31/10/26", seed=32,
+         rows=[("Poly thread cones (white)", 24, 85), ("Overlock thread (pkt)", 8, 120), ("Shirt buttons (gross)", 4, 200)],
+         words="Three thousand two hundred only",
+         expected="HOLD", problem="₹3,800 in figures, 'three thousand two hundred' in words",
+         why="Figures are easy to change (a 2 into an 8); words aren't. Whichever is right, the shop has to confirm it."),
+    dict(id="T33", file="T33_already_paid_at_counter.jpg", kind="book_photo", shop=SELVI, bill_no="0469", date="30/10/26", seed=33,
+         rows=[("Poly thread cones (black)", 12, 85), ("Shirt buttons (gross)", 3, 200), ("Tailor's chalk (box)", 6, 130)],
+         words="Two thousand four hundred only", paid=True,
+         expected="HOLD", after_confirm="APPROVE", problem="Cash memo marked 'PAID - Cash, Received with thanks'",
+         why="Our staff already paid at the counter. Paying Selvi again would pay twice, so once confirmed, the step is to "
+             "repay the staff member who paid."),
+    dict(id="T34", file="T34_two_small_signs_call_the_shop.jpg", kind="book_photo", shop=dict(SELVI, phone="+91 98432 17706"),
+         bill_no="0119", date="01/11/26", seed=34, needs_first="T26a",
+         rows=[("Poly thread cones (white)", 20, 85), ("Elastic 1 inch (roll)", 5, 200)],
+         expected="HOLD", after_confirm="APPROVE", problem="A second bill book and a phone typo on the same bill",
+         why="Each would only be noted on its own. Two together are worth a phone call, so Confirm received also asks "
+             "someone to call Selvi on the number we have."),
 ]
 
 
@@ -351,7 +399,8 @@ def make_informal(answers):
             (OUT / s["file"]).write_bytes(pdf)
         else:
             seed = s.get("seed") or int(s["id"][1:])
-            pdf, total = bill_book(s["shop"], s["bill_no"], s["date"], s["rows"], s.get("extra"), seed=seed)
+            pdf, total = bill_book(s["shop"], s["bill_no"], s["date"], s["rows"], s.get("extra"), seed=seed,
+                                   words=s.get("words"), paid=s.get("paid", False))
             if s["kind"] == "book_photo":
                 mi.to_photo(pdf, OUT / s["file"], seed=seed)
             else:
@@ -365,6 +414,8 @@ def make_informal(answers):
                             printed=dict(vendor_name=s["shop"]["name"], vendor_gstin=None, vendor_phone=s["shop"]["phone"],
                                          gst_registration="applied" if s.get("arn") else "none", gst_arn=s.get("arn"),
                                          written_by_hand=s["kind"] != "simple", buyer_gstin=None,
+                                         amount_in_words=s.get("words"), paid_status="paid" if s.get("paid") else None,
+                                         payment_mode="cash" if s.get("paid") else None,
                                          invoice_number=s["bill_no"], invoice_date=s["date"], po_reference=None,
                                          place_of_supply=None, line_items=items, taxable_value=sub, tax=tax,
                                          total=sub + sum(tax.values()), bank={"bank_name": None, "bank_account": None, "ifsc": None})))

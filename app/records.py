@@ -43,6 +43,10 @@ CREATE TABLE IF NOT EXISTS runs (
   po_number TEXT, po_inferred INTEGER, taxable_value REAL, total REAL,
   decision TEXT, headline TEXT, flags TEXT, result_json TEXT
 );
+-- phone numbers a clerk has checked by calling the shop, added to a supplier's file
+CREATE TABLE IF NOT EXISTS vendor_phones (
+  vendor_id TEXT, phone TEXT, added_by TEXT, added_at TEXT
+);
 CREATE TABLE IF NOT EXISTS po_billed (
   po_number TEXT, line_no INTEGER, qty REAL, value REAL, run_id TEXT
 );
@@ -64,7 +68,7 @@ def connect():
     con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
     cols = {r["name"] for r in con.execute("PRAGMA table_info(runs)")}
-    for col, typ in (("saved", "INTEGER DEFAULT 0"), ("saved_at", "TEXT"), ("bill_json", "TEXT")):
+    for col, typ in (("saved", "INTEGER DEFAULT 0"), ("saved_at", "TEXT"), ("bill_json", "TEXT"), ("book", "TEXT")):
         if col not in cols:  # older databases: add the new columns
             con.execute(f"ALTER TABLE runs ADD COLUMN {col} {typ}")
     log_cols = {r["name"] for r in con.execute("PRAGMA table_info(decision_log)")}
@@ -87,9 +91,32 @@ def reset():
     try:
         con.execute("DELETE FROM runs")
         con.execute("DELETE FROM po_billed")
+        con.execute("DELETE FROM vendor_phones")
         con.commit()
     finally:
         con.close()
+
+
+def extra_phones(con):
+    """Checked extra numbers per supplier, as their last 10 digits."""
+    out = {}
+    for r in con.execute("SELECT vendor_id, phone FROM vendor_phones"):
+        out.setdefault(r["vendor_id"], []).append(r["phone"])
+    return out
+
+
+def add_phone(con, vendor_id, phone, name):
+    from datetime import datetime
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())[-10:]
+    name = " ".join((name or "").split())[:60]
+    if len(digits) != 10:
+        raise SaveError("That doesn't look like a 10-digit phone number.")
+    if not name:
+        raise SaveError("Type the name of the person who called the shop.")
+    if digits not in extra_phones(con).get(vendor_id, []):
+        con.execute("INSERT INTO vendor_phones VALUES (?,?,?,?)",
+                    (vendor_id, digits, name, datetime.now().isoformat(sep=" ", timespec="seconds")))
+        con.commit()
 
 
 def billed_on_po(con, po_number):
@@ -189,7 +216,7 @@ STATUS = {0: "pass", 1: "warn", 2: "hold", 3: "reject"}
 SEVERITY = {"PASS": 0, "INFO": 1, "HOLD": 2, "REJECT": 3}
 
 
-def confirm(con, run_id, name):
+def confirm(con, run_id, name, called=False):
     """The buyer confirms a small supplier's goods arrived. That is the only thing the bill
     was waiting for, so it becomes payable. The audit trail keeps the original hold and adds
     who confirmed it and when."""
@@ -205,8 +232,10 @@ def confirm(con, run_id, name):
         return res
     if not res.get("confirmable"):
         raise SaveError("This bill is held for something the buyer can't confirm away. Check the reasons.")
+    if res.get("needs_call") and not called:
+        raise SaveError("Two small things look off on this bill, so someone has to call the shop first. Tick the box once you have.")
     when = datetime.now().isoformat(sep=" ", timespec="seconds")
-    note = f"Received, confirmed by {name}"
+    note = f"Received, confirmed by {name}" + ("; the shop confirmed the bill by phone" if res.get("needs_call") else "")
     by_code = {}
     for fl in res["flags"] + [x for st in res["stages"] for x in st["flags"]]:
         if fl["severity"] == "HOLD":   # only confirmable holds are left (checked above)
@@ -224,7 +253,7 @@ def confirm(con, run_id, name):
                     c.update(ok=True, detail=f"confirmed by {name}")
         elif st["status"] == "hold":
             st.update(status=STATUS[worst], summary=note)
-    head = f"{res['pay_short']}: {name} confirmed the goods arrived."
+    head = f"{res['pay_short']}: {name} confirmed the goods arrived" + (" and the shop confirmed the bill." if res.get("needs_call") else ".")
     steps = [res["pay_step"]]
     if "NEW_SMALL_SUPPLIER" in by_code:
         steps.append("Procurement adds the supplier to the list if we'll buy from them again.")

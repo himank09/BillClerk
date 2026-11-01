@@ -793,6 +793,9 @@
       "gst_arn": null,
       "written_by_hand": true,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "0457",
       "invoice_date": "28/10/26",
       "po_reference": null,
@@ -852,6 +855,9 @@
       "gst_arn": null,
       "written_by_hand": true,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "1182",
       "invoice_date": "29/10/26",
       "po_reference": null,
@@ -902,6 +908,9 @@
       "gst_arn": null,
       "written_by_hand": true,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "0463",
       "invoice_date": "30/10/26",
       "po_reference": null,
@@ -964,6 +973,9 @@
       "gst_arn": "AA331026047118Q",
       "written_by_hand": false,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "KTS/112",
       "invoice_date": "27-10-2026",
       "po_reference": null,
@@ -1012,7 +1024,7 @@
     "file": "T25_big_cash_bill.pdf",
     "problem": "₹38,500 with no bank details and no order",
     "expected": "HOLD",
-    "why": "Over ₹10,000 it can't be paid in cash (Income Tax s.40A(3)) and there are no bank details. It's also over the ₹25,000 a month for a supplier without a GSTIN, and too big to buy without an order.",
+    "why": "Over ₹10,000 it can't be paid in cash (income-tax rules on cash payments) and there are no bank details. It's also over the ₹25,000 a month for a supplier without a GSTIN, and too big to buy without an order.",
     "needs_first": null,
     "after_confirm": null,
     "printed": {
@@ -1023,6 +1035,9 @@
       "gst_arn": "AA331026047118Q",
       "written_by_hand": false,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "KTS/118",
       "invoice_date": "30-10-2026",
       "po_reference": null,
@@ -1082,6 +1097,9 @@
       "gst_arn": null,
       "written_by_hand": true,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "0470",
       "invoice_date": "31/10/26",
       "po_reference": null,
@@ -1141,6 +1159,9 @@
       "gst_arn": null,
       "written_by_hand": true,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "0471",
       "invoice_date": "31/10/26",
       "po_reference": null,
@@ -1200,6 +1221,9 @@
       "gst_arn": null,
       "written_by_hand": true,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "0432",
       "invoice_date": "01/11/26",
       "po_reference": null,
@@ -1245,20 +1269,23 @@
   },
   {
     "id": "T28",
-    "file": "T28_wrong_phone_number.jpg",
-    "problem": "Selvi's name, but a different phone number",
+    "file": "T28_different_phone_number.jpg",
+    "problem": "Selvi's name, but a completely different phone number",
     "expected": "HOLD",
-    "why": "The bill says +91 98432 71760; Selvi's number on file is +91 98432 17760. A fake bill usually copies the name, not the number.",
+    "why": "The bill says +91 90036 44218; Selvi's number is +91 98432 17760. A fake bill usually copies the name, not the number. If Selvi confirms by phone that it's their second number, add it to their file and check again.",
     "needs_first": null,
     "after_confirm": null,
     "printed": {
       "vendor_name": "Selvi Thread & Needle Store",
       "vendor_gstin": null,
-      "vendor_phone": "+91 98432 71760",
+      "vendor_phone": "+91 90036 44218",
       "gst_registration": "none",
       "gst_arn": null,
       "written_by_hand": true,
       "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
       "invoice_number": "0466",
       "invoice_date": "29/10/26",
       "po_reference": null,
@@ -1295,6 +1322,404 @@
       "taxable_value": 4250,
       "tax": {},
       "total": 4250,
+      "bank": {
+        "bank_name": null,
+        "bank_account": null,
+        "ifsc": null
+      }
+    }
+  },
+  {
+    "id": "T29",
+    "file": "T29_phone_number_typo.jpg",
+    "problem": "Selvi's phone number with two digits swapped",
+    "expected": "HOLD",
+    "why": "71760 instead of 17760 is a writing slip, not a sign of fraud. It's noted, the buyer confirms as usual, and payment still goes only to Selvi's UPI ID on file.",
+    "needs_first": null,
+    "after_confirm": "APPROVE",
+    "printed": {
+      "vendor_name": "Selvi Thread & Needle Store",
+      "vendor_gstin": null,
+      "vendor_phone": "+91 98432 71760",
+      "gst_registration": "none",
+      "gst_arn": null,
+      "written_by_hand": true,
+      "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
+      "invoice_number": "0467",
+      "invoice_date": "29/10/26",
+      "po_reference": null,
+      "place_of_supply": null,
+      "line_items": [
+        {
+          "description": "Poly thread cones (black)",
+          "hsn_sac": null,
+          "qty": 30,
+          "unit": null,
+          "unit_price": 85,
+          "gst_rate": null,
+          "taxable_value": 2550
+        },
+        {
+          "description": "Elastic 1 inch (roll)",
+          "hsn_sac": null,
+          "qty": 5,
+          "unit": null,
+          "unit_price": 200,
+          "gst_rate": null,
+          "taxable_value": 1000
+        },
+        {
+          "description": "Machine needles DBx1 (pkt)",
+          "hsn_sac": null,
+          "qty": 7,
+          "unit": null,
+          "unit_price": 100,
+          "gst_rate": null,
+          "taxable_value": 700
+        }
+      ],
+      "taxable_value": 4250,
+      "tax": {},
+      "total": 4250,
+      "bank": {
+        "bank_name": null,
+        "bank_account": null,
+        "ifsc": null
+      }
+    }
+  },
+  {
+    "id": "T30a",
+    "file": "T30a_march_bill_confirm_and_save_first.pdf",
+    "problem": "Nothing: a March bill with a high number, to confirm and save first",
+    "expected": "HOLD",
+    "why": "Press Confirm received, then Save to records. Then try T30b.",
+    "needs_first": null,
+    "after_confirm": "APPROVE",
+    "printed": {
+      "vendor_name": "Selvi Thread & Needle Store",
+      "vendor_gstin": null,
+      "vendor_phone": "+91 98432 17760",
+      "gst_registration": "none",
+      "gst_arn": null,
+      "written_by_hand": true,
+      "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
+      "invoice_number": "0985",
+      "invoice_date": "28/03/26",
+      "po_reference": null,
+      "place_of_supply": null,
+      "line_items": [
+        {
+          "description": "Poly thread cones (black)",
+          "hsn_sac": null,
+          "qty": 20,
+          "unit": null,
+          "unit_price": 85,
+          "gst_rate": null,
+          "taxable_value": 1700
+        },
+        {
+          "description": "Shirt buttons (gross)",
+          "hsn_sac": null,
+          "qty": 5,
+          "unit": null,
+          "unit_price": 200,
+          "gst_rate": null,
+          "taxable_value": 1000
+        }
+      ],
+      "taxable_value": 2700,
+      "tax": {},
+      "total": 2700,
+      "bank": {
+        "bank_name": null,
+        "bank_account": null,
+        "ifsc": null
+      }
+    }
+  },
+  {
+    "id": "T30b",
+    "file": "T30b_april_new_book_starts_at_4.pdf",
+    "problem": "Bill no. 0004 in April, after no. 0985 in March",
+    "expected": "HOLD",
+    "why": "Not a problem: shops start a new bill book in April, with the new financial year. Numbers are only compared within one year.",
+    "needs_first": "T30a",
+    "after_confirm": "APPROVE",
+    "printed": {
+      "vendor_name": "Selvi Thread & Needle Store",
+      "vendor_gstin": null,
+      "vendor_phone": "+91 98432 17760",
+      "gst_registration": "none",
+      "gst_arn": null,
+      "written_by_hand": true,
+      "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
+      "invoice_number": "0004",
+      "invoice_date": "02/04/26",
+      "po_reference": null,
+      "place_of_supply": null,
+      "line_items": [
+        {
+          "description": "Machine needles DBx1 (pkt)",
+          "hsn_sac": null,
+          "qty": 12,
+          "unit": null,
+          "unit_price": 95,
+          "gst_rate": null,
+          "taxable_value": 1140
+        },
+        {
+          "description": "Elastic 1 inch (roll)",
+          "hsn_sac": null,
+          "qty": 4,
+          "unit": null,
+          "unit_price": 200,
+          "gst_rate": null,
+          "taxable_value": 800
+        }
+      ],
+      "taxable_value": 1940,
+      "tax": {},
+      "total": 1940,
+      "bank": {
+        "bank_name": null,
+        "bank_account": null,
+        "ifsc": null
+      }
+    }
+  },
+  {
+    "id": "T31",
+    "file": "T31_second_bill_book.pdf",
+    "problem": "Bill no. 0118 from Selvi's second bill book",
+    "expected": "HOLD",
+    "why": "0118 is in a different book (pages 0101-0200) from T26a's 0470. Many shops use two books at once, so it's only noted, and the buyer confirms as usual.",
+    "needs_first": "T26a",
+    "after_confirm": "APPROVE",
+    "printed": {
+      "vendor_name": "Selvi Thread & Needle Store",
+      "vendor_gstin": null,
+      "vendor_phone": "+91 98432 17760",
+      "gst_registration": "none",
+      "gst_arn": null,
+      "written_by_hand": true,
+      "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
+      "invoice_number": "0118",
+      "invoice_date": "01/11/26",
+      "po_reference": null,
+      "place_of_supply": null,
+      "line_items": [
+        {
+          "description": "Overlock thread (pkt)",
+          "hsn_sac": null,
+          "qty": 6,
+          "unit": null,
+          "unit_price": 120,
+          "gst_rate": null,
+          "taxable_value": 720
+        },
+        {
+          "description": "Zips 7 inch (dozen)",
+          "hsn_sac": null,
+          "qty": 4,
+          "unit": null,
+          "unit_price": 175,
+          "gst_rate": null,
+          "taxable_value": 700
+        }
+      ],
+      "taxable_value": 1420,
+      "tax": {},
+      "total": 1420,
+      "bank": {
+        "bank_name": null,
+        "bank_account": null,
+        "ifsc": null
+      }
+    }
+  },
+  {
+    "id": "T32",
+    "file": "T32_amount_in_words_differs.pdf",
+    "problem": "₹3,800 in figures, 'three thousand two hundred' in words",
+    "expected": "HOLD",
+    "why": "Figures are easy to change (a 2 into an 8); words aren't. Whichever is right, the shop has to confirm it.",
+    "needs_first": null,
+    "after_confirm": null,
+    "printed": {
+      "vendor_name": "Selvi Thread & Needle Store",
+      "vendor_gstin": null,
+      "vendor_phone": "+91 98432 17760",
+      "gst_registration": "none",
+      "gst_arn": null,
+      "written_by_hand": true,
+      "buyer_gstin": null,
+      "amount_in_words": "Three thousand two hundred only",
+      "paid_status": null,
+      "payment_mode": null,
+      "invoice_number": "0472",
+      "invoice_date": "31/10/26",
+      "po_reference": null,
+      "place_of_supply": null,
+      "line_items": [
+        {
+          "description": "Poly thread cones (white)",
+          "hsn_sac": null,
+          "qty": 24,
+          "unit": null,
+          "unit_price": 85,
+          "gst_rate": null,
+          "taxable_value": 2040
+        },
+        {
+          "description": "Overlock thread (pkt)",
+          "hsn_sac": null,
+          "qty": 8,
+          "unit": null,
+          "unit_price": 120,
+          "gst_rate": null,
+          "taxable_value": 960
+        },
+        {
+          "description": "Shirt buttons (gross)",
+          "hsn_sac": null,
+          "qty": 4,
+          "unit": null,
+          "unit_price": 200,
+          "gst_rate": null,
+          "taxable_value": 800
+        }
+      ],
+      "taxable_value": 3800,
+      "tax": {},
+      "total": 3800,
+      "bank": {
+        "bank_name": null,
+        "bank_account": null,
+        "ifsc": null
+      }
+    }
+  },
+  {
+    "id": "T33",
+    "file": "T33_already_paid_at_counter.jpg",
+    "problem": "Cash memo marked 'PAID - Cash, Received with thanks'",
+    "expected": "HOLD",
+    "why": "Our staff already paid at the counter. Paying Selvi again would pay twice, so once confirmed, the step is to repay the staff member who paid.",
+    "needs_first": null,
+    "after_confirm": "APPROVE",
+    "printed": {
+      "vendor_name": "Selvi Thread & Needle Store",
+      "vendor_gstin": null,
+      "vendor_phone": "+91 98432 17760",
+      "gst_registration": "none",
+      "gst_arn": null,
+      "written_by_hand": true,
+      "buyer_gstin": null,
+      "amount_in_words": "Two thousand four hundred only",
+      "paid_status": "paid",
+      "payment_mode": "cash",
+      "invoice_number": "0469",
+      "invoice_date": "30/10/26",
+      "po_reference": null,
+      "place_of_supply": null,
+      "line_items": [
+        {
+          "description": "Poly thread cones (black)",
+          "hsn_sac": null,
+          "qty": 12,
+          "unit": null,
+          "unit_price": 85,
+          "gst_rate": null,
+          "taxable_value": 1020
+        },
+        {
+          "description": "Shirt buttons (gross)",
+          "hsn_sac": null,
+          "qty": 3,
+          "unit": null,
+          "unit_price": 200,
+          "gst_rate": null,
+          "taxable_value": 600
+        },
+        {
+          "description": "Tailor's chalk (box)",
+          "hsn_sac": null,
+          "qty": 6,
+          "unit": null,
+          "unit_price": 130,
+          "gst_rate": null,
+          "taxable_value": 780
+        }
+      ],
+      "taxable_value": 2400,
+      "tax": {},
+      "total": 2400,
+      "bank": {
+        "bank_name": null,
+        "bank_account": null,
+        "ifsc": null
+      }
+    }
+  },
+  {
+    "id": "T34",
+    "file": "T34_two_small_signs_call_the_shop.jpg",
+    "problem": "A second bill book and a phone typo on the same bill",
+    "expected": "HOLD",
+    "why": "Each would only be noted on its own. Two together are worth a phone call, so Confirm received also asks someone to call Selvi on the number we have.",
+    "needs_first": "T26a",
+    "after_confirm": "APPROVE",
+    "printed": {
+      "vendor_name": "Selvi Thread & Needle Store",
+      "vendor_gstin": null,
+      "vendor_phone": "+91 98432 17706",
+      "gst_registration": "none",
+      "gst_arn": null,
+      "written_by_hand": true,
+      "buyer_gstin": null,
+      "amount_in_words": null,
+      "paid_status": null,
+      "payment_mode": null,
+      "invoice_number": "0119",
+      "invoice_date": "01/11/26",
+      "po_reference": null,
+      "place_of_supply": null,
+      "line_items": [
+        {
+          "description": "Poly thread cones (white)",
+          "hsn_sac": null,
+          "qty": 20,
+          "unit": null,
+          "unit_price": 85,
+          "gst_rate": null,
+          "taxable_value": 1700
+        },
+        {
+          "description": "Elastic 1 inch (roll)",
+          "hsn_sac": null,
+          "qty": 5,
+          "unit": null,
+          "unit_price": 200,
+          "gst_rate": null,
+          "taxable_value": 1000
+        }
+      ],
+      "taxable_value": 2700,
+      "tax": {},
+      "total": 2700,
       "bank": {
         "bank_name": null,
         "bank_account": null,

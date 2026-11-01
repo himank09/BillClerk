@@ -78,3 +78,55 @@ def inr(x):
         whole = ",".join([head] + groups if head else groups) + "," + tail
     s = "₹" + whole + ("" if frac == "00" else "." + frac)
     return "-" + s if neg else s
+
+
+_ONES = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
+    "sixteen seventeen eighteen nineteen".split())}
+_TENS = {w: 10 * i for i, w in enumerate("_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()) if w != "_"}
+_SCALES = {"thousand": 1_000, "lakh": 100_000, "lakhs": 100_000, "lac": 100_000, "lacs": 100_000,
+           "crore": 10_000_000, "crores": 10_000_000}
+_SKIP = {"rupees", "rupee", "rs", "inr", "only", "and", "the", "sum", "of", "amount", "total", "in", "words"}
+
+
+def _words_number(words):
+    total, part = 0, 0
+    for w in words:
+        if w in _ONES:
+            part += _ONES[w]
+        elif w in _TENS:
+            part += _TENS[w]
+        elif w == "hundred":
+            part = (part or 1) * 100
+        elif w in _SCALES:
+            total += (part or 1) * _SCALES[w]
+            part = 0
+        elif w not in _SKIP:
+            return None          # a word we don't know: better no answer than a wrong one
+    return total + part
+
+
+def words_to_amount(text):
+    """'Rupees Three Thousand Eight Hundred only' -> 3800.0. Knows lakh and crore, and paise.
+    Returns None if the words can't be read with certainty."""
+    if not text:
+        return None
+    t = text.lower().replace("-", " ")
+    if re.fullmatch(r"[^a-z]*\d[\d,]*(\.\d+)?[^a-z]*(only)?[^a-z]*", t.replace("rs", "").replace("rupees", "")):
+        return to_amount(re.search(r"\d[\d,]*(\.\d+)?", t).group())     # the 'words' are just figures
+    t = re.sub(r"[^a-z ]", " ", t)
+    words = t.split()
+    paise = 0
+    if "paise" in words:
+        i = words.index("paise")
+        j = max((k for k in range(i) if words[k] == "and"), default=None)
+        if j is None:
+            return None
+        paise = _words_number(words[j + 1:i])
+        if paise is None:
+            return None
+        words = words[:j]
+    rupees = _words_number(words)
+    if rupees is None or (rupees == 0 and not paise):
+        return None
+    return rupees + paise / 100
