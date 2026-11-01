@@ -200,6 +200,151 @@ def quotation():
     return buf.getvalue()
 
 
+# ---------------------------------------------------------------- informal bills
+# Small suppliers without a GSTIN: a bill book filled in by hand, or a plain printed bill.
+UNKNOWN_SHOP = dict(name="Sri Murugan Electricals", address="3, Mill Road, Tiruppur 641601", phone="+91 99940 31872")
+
+
+def bill_book(shop, bill_no, date, rows, extra=None, ink="#1B2F8A", seed=1):
+    """A printed bill-book page (the kind sold in any stationery shop), filled in by hand."""
+    import random
+    rnd = random.Random(seed)
+    W, H = A4[0], A4[1] * 0.62           # a half-height page, like a real bill book
+    buf = io.BytesIO(); c = canvas.Canvas(buf, pagesize=(W, H))
+    red = mi.colors.HexColor("#B3261E")
+    L, R = 16 * mm, W - 16 * mm
+    # the printed part, in red
+    c.setFillColor(red); c.setStrokeColor(red)
+    c.setFont("SerifB", 20); c.drawCentredString(W / 2, H - 17 * mm, shop["name"].upper())
+    c.setFont("Serif", 9); c.drawCentredString(W / 2, H - 23 * mm, shop["address"])
+    c.drawCentredString(W / 2, H - 28 * mm, f"Cell: {shop['phone'].replace('+91 ', '')}")
+    c.setFont("SansB", 10); c.drawCentredString(W / 2, H - 36 * mm, "CASH / CREDIT BILL")
+    c.setFont("Sans", 10); c.drawString(L, H - 45 * mm, "No."); c.setFont("SansB", 13); c.drawString(L + 8 * mm, H - 45 * mm, bill_no)
+    c.setFont("Sans", 10); c.drawString(R - 52 * mm, H - 45 * mm, "Date:"); c.line(R - 41 * mm, H - 46 * mm, R, H - 46 * mm)
+    c.drawString(L, H - 54 * mm, "M/s."); c.line(L + 10 * mm, H - 55 * mm, R, H - 55 * mm)
+    top, rowh = H - 61 * mm, 9 * mm
+    cols = [L, L + 12 * mm, L + 108 * mm, L + 126 * mm, L + 148 * mm, R]
+    c.setLineWidth(0.8); c.rect(L, top - 8 * rowh, R - L, 8 * rowh + 7 * mm)
+    c.line(L, top, R, top)
+    for x in cols[1:-1]:
+        c.line(x, top + 7 * mm, x, top - 8 * rowh)
+    c.setFont("SansB", 9)
+    for x, t in zip(cols, ["S.No.", "Particulars", "Qty", "Rate", "Amount"]):
+        c.drawString(x + 2 * mm, top + 2.2 * mm, t)
+    c.line(L, top - 7 * rowh, R, top - 7 * rowh)
+    c.setFont("SansB", 10); c.drawRightString(cols[4] - 2 * mm, top - 8 * rowh + 3 * mm, "TOTAL")
+    c.setFont("Sans", 8); c.drawString(L, 10 * mm, "Goods once sold will not be taken back.  E. & O.E.")
+    c.drawRightString(R, 10 * mm, f"For {shop['name']}")
+    # the handwritten part, in ballpoint blue, never quite on the line
+    c.setFillColor(mi.colors.HexColor(ink))
+
+    def hand(x, y, text, size=19, font="Hand"):
+        c.saveState(); c.translate(x + rnd.uniform(-0.6, 0.6) * mm, y + rnd.uniform(-0.5, 0.7) * mm)
+        c.rotate(rnd.uniform(-1.8, 1.8)); c.setFont(font, size); c.drawString(0, 0, text); c.restoreState()
+    hand(R - 39 * mm, H - 45 * mm, date)
+    hand(L + 13 * mm, H - 53.5 * mm, "R.J. Garments, Avinashi Rd")
+    total = 0
+    for i, (desc, qty, rate) in enumerate(rows):
+        y = top - (i + 1) * rowh + 2.2 * mm
+        amt = qty * rate; total += amt
+        hand(cols[0] + 4 * mm, y, str(i + 1)); hand(cols[1] + 2 * mm, y, desc, 17)
+        hand(cols[2] + 3 * mm, y, str(qty)); hand(cols[3] + 2 * mm, y, f"{rate}")
+        hand(cols[4] + 2 * mm, y, f"{amt:,}/-")
+    if extra:                             # e.g. GST written in by a shop that isn't registered
+        label, amt = extra
+        y = top - (len(rows) + 1) * rowh + 2.2 * mm
+        hand(cols[1] + 2 * mm, y, label, 17); hand(cols[4] + 2 * mm, y, f"{amt:,}/-"); total += amt
+    hand(cols[4] + 2 * mm, top - 8 * rowh + 2.5 * mm, f"{total:,}/-", 21)
+    hand(R - 30 * mm, 15 * mm, "Selvi" if "Selvi" in shop["name"] else "S. Murugan", 18, "Hand2")
+    c.showPage(); c.save()
+    return buf.getvalue(), total
+
+
+def simple_bill(shop, bill_no, date, rows, arn):
+    """A plain typed bill from a small shop whose GST registration is still in progress."""
+    W, H = A4
+    buf = io.BytesIO(); c = canvas.Canvas(buf, pagesize=A4)
+    L, R = 20 * mm, W - 20 * mm
+    c.setFont("SansB", 17); c.drawString(L, H - 25 * mm, shop["name"])
+    c.setFont("Sans", 9.5); c.drawString(L, H - 31 * mm, f"{shop['address']}   Ph: {shop['phone']}   {shop.get('email', '')}")
+    c.drawString(L, H - 36 * mm, f"GSTIN: Applied for (ARN {arn})")
+    c.setFont("SansB", 14); c.drawCentredString(W / 2, H - 50 * mm, "BILL")
+    c.setFont("Sans", 10)
+    c.drawString(L, H - 60 * mm, f"Bill No: {bill_no}"); c.drawRightString(R, H - 60 * mm, f"Date: {date}")
+    c.drawString(L, H - 66 * mm, f"To: {mi.BUYER['name']}, {mi.BUYER['address']}")
+    y = H - 80 * mm
+    c.setFont("SansB", 10)
+    for x, t in ((L, "Item"), (L + 105 * mm, "Qty"), (L + 125 * mm, "Rate")):
+        c.drawString(x, y, t)
+    c.drawRightString(R, y, "Amount")
+    c.line(L, y - 2 * mm, R, y - 2 * mm); c.setFont("Sans", 10)
+    total = 0
+    for desc, qty, rate in rows:
+        y -= 7 * mm; total += qty * rate
+        c.drawString(L, y, desc); c.drawString(L + 105 * mm, y, str(qty)); c.drawString(L + 125 * mm, y, f"{rate:,.2f}")
+        c.drawRightString(R, y, f"{qty * rate:,.2f}")
+    c.line(L, y - 3 * mm, R, y - 3 * mm)
+    c.setFont("SansB", 11); c.drawString(L + 105 * mm, y - 9 * mm, "Total"); c.drawRightString(R, y - 9 * mm, f"Rs. {total:,.2f}")
+    c.setFont("Sans", 9); c.drawString(L, y - 20 * mm, "No GST charged: our GST registration is under process.")
+    c.drawString(L, y - 25 * mm, "Payment by UPI or cash.")
+    c.drawRightString(R, y - 40 * mm, f"For {shop['name']}")
+    c.showPage(); c.save()
+    return buf.getvalue(), total
+
+
+SELVI, KUMARAN = V["V007"], V["V008"]
+INFORMAL = [
+    dict(id="T21", file="T21_handwritten_bill_book_photo.jpg", kind="book_photo", shop=SELVI, bill_no="0457", date="28/10/26",
+         rows=[("Poly thread cones (black)", 20, 85), ("Machine needles DBx1 (pkt)", 10, 95), ("Elastic 1 inch (roll)", 4, 200)],
+         expected="APPROVE", problem="A hand-filled bill-book bill from a small shop, photographed",
+         why="Selvi has no GSTIN and charges none, so it's a valid bill (not a tax invoice). Small purchase, no order needed."),
+    dict(id="T22", file="T22_new_small_shop.pdf", kind="book_scan", shop=UNKNOWN_SHOP, bill_no="1182", date="29/10/26",
+         rows=[("Tube light 4 ft", 6, 280), ("Wire roll 1.5 sqmm", 1, 1120)],
+         expected="HOLD", problem="A shop we've never bought from, small amount",
+         why="Not on the supplier list but under ₹6,000, so the person who bought it confirms rather than an outright reject."),
+    dict(id="T23", file="T23_gst_added_without_gstin.pdf", kind="book_scan", shop=SELVI, bill_no="0463", date="30/10/26",
+         rows=[("Poly thread cones (black)", 20, 85), ("Machine needles DBx1 (pkt)", 10, 95), ("Elastic 1 inch (roll)", 4, 200)],
+         extra=("GST 18%", 621),
+         expected="HOLD", problem="GST added by hand, but the shop has no GSTIN",
+         why="A business that isn't registered can't charge GST (CGST Act s.32). Pay ₹3,450, not ₹4,071, or get a proper tax invoice."),
+    dict(id="T24", file="T24_gst_applied_for.pdf", kind="simple", shop=KUMARAN, bill_no="KTS/112", date="27-10-2026",
+         rows=[("Measuring tapes (fibreglass)", 20, 60), ("Tailor's chalk (box of 10)", 10, 90), ("Fabric scissors 10 inch", 6, 512.5)],
+         arn="AA331026047118Q",
+         expected="APPROVE", problem="Shop's GST registration still in progress, no GST charged",
+         why="Correct: GST can't be charged until the GSTIN is issued. Pay it, and ask for GST invoices once they have the number."),
+    dict(id="T25", file="T25_big_cash_bill.pdf", kind="simple", shop=KUMARAN, bill_no="KTS/118", date="30-10-2026",
+         rows=[("Industrial fabric scissors 12 inch", 10, 1850), ("Cutting table cover (heavy)", 5, 2400), ("Pattern paper roll", 20, 400)],
+         arn="AA331026047118Q",
+         expected="HOLD", problem="₹38,500 with no bank details and no order",
+         why="Over ₹10,000 it can't be paid in cash (Income Tax s.40A(3)) and there are no bank details; also too big to buy without an order."),
+]
+
+
+def make_informal(answers):
+    for s in INFORMAL:
+        if s["kind"] == "simple":
+            pdf, total = simple_bill(s["shop"], s["bill_no"], s["date"], s["rows"], s["arn"])
+            (OUT / s["file"]).write_bytes(pdf)
+        else:
+            pdf, total = bill_book(s["shop"], s["bill_no"], s["date"], s["rows"], s.get("extra"), seed=int(s["id"][1:]))
+            if s["kind"] == "book_photo":
+                mi.to_photo(pdf, OUT / s["file"], seed=int(s["id"][1:]))
+            else:
+                mi.to_scan(pdf, OUT / s["file"], seed=int(s["id"][1:]), angle=1.4)
+        items = [dict(description=d, hsn_sac=None, qty=q, unit=None, unit_price=r, gst_rate=None, taxable_value=q * r)
+                 for d, q, r in s["rows"]]
+        sub = sum(i["taxable_value"] for i in items)
+        tax = {"CGST": s["extra"][1] / 2, "SGST": s["extra"][1] / 2} if s.get("extra") else {}
+        answers.append(dict(id=s["id"], file=s["file"], problem=s["problem"], expected=s["expected"], why=s["why"], needs_first=None,
+                            printed=dict(vendor_name=s["shop"]["name"], vendor_gstin=None, vendor_phone=s["shop"]["phone"],
+                                         gst_registration="applied" if s.get("arn") else "none", gst_arn=s.get("arn"),
+                                         written_by_hand=s["kind"] != "simple", buyer_gstin=None,
+                                         invoice_number=s["bill_no"], invoice_date=s["date"], po_reference=None,
+                                         place_of_supply=None, line_items=items, taxable_value=sub, tax=tax,
+                                         total=sub + sum(tax.values()), bank={"bank_name": None, "bank_account": None, "ifsc": None})))
+        print(f"{s['file']:42s} {mi.inr(total):>12s}  -> {s['expected']}")
+
+
 def main():
     # T17a / T18a are the originals (copies of examples 01 and 02): save them, then try T17b / T18b
     for tid, src, saved in (("T17a", "01_apex_happy_intrastate.pdf", "AOS/26-27/0042"),
@@ -240,6 +385,7 @@ def main():
              why="It can't be opened as a PDF, so the sender is asked for a fresh copy.", needs_first=None, printed=None),
     ]
     print("T19_quotation_not_invoice.pdf  -> REJECT\nT20_not_really_a_pdf.pdf       -> REJECT")
+    make_informal(answers)
     (OUT / "answers.json").write_text(json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8")
 
 

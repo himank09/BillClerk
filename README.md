@@ -15,7 +15,7 @@ Each invoice goes through nine steps:
 1. **Receive.** Is it a PDF or a photo, and can it be opened?
 2. **Read.** Gemini pulls out the fields. Digital PDFs send their text, scans and photos send the image. Anything that isn't an invoice (a CV, a report) is rejected here.
 3. **Check the document.** Required details present, numbers add up, GSTIN valid, billed to us, no handwritten changes.
-4. **Check the vendor.** Approved vendor, not blocked, and the bank account matches the one on file.
+4. **Check the vendor.** Approved vendor, not blocked, and the bank account matches the one on file. Vendors are matched by GSTIN, or by phone number or name when there isn't one.
 5. **Check GST.** Same state means CGST + SGST, different states means IGST, and the amount must match the rate.
 6. **Find the purchase order.** Use the one quoted, or work it out from the vendor's open orders if none is quoted.
 7. **Check for duplicates.** Compare with invoices already in the records, ignoring how the number or date is written.
@@ -27,6 +27,7 @@ Each invoice goes through nine steps:
 - **Nothing changes until you say so.** Checking an invoice records nothing. *Save to records* is the human sign-off: only saved invoices count when spotting duplicates or adding up what's been billed against an order. *Undo* takes it back.
 - **Audit trail.** Every decision is kept permanently with its reasons, the rules in force at the time and a fingerprint of the file. If a vendor asks months later why an invoice was rejected, the answer is there, even if the file was deleted. *Find by file* matches a disputed file to its decision without storing it.
 - **Uploads don't pile up.** An upload you haven't saved can be deleted with one click, and is deleted automatically after 24 hours anyway.
+- **Small suppliers count too.** Not every supplier has a GSTIN or prints proper invoices. A thread shop's hand-filled bill book, a photo of a cash memo, or a shop whose GST registration is still being processed are all valid bills. BillClerk reads them, finds the supplier by phone or name, and applies the rules that fit: they can't charge GST, buys up to ₹6,000 don't need a purchase order, and bills over ₹10,000 must be paid by bank.
 - **It survives a bad day at Google.** If Gemini is busy or slow, BillClerk retries, then tries another model. If nothing works, the invoice is put on hold for a person instead of guessed at. Each reading is saved, so checking the same file again is instant.
 
 ## Run it on your computer
@@ -77,7 +78,7 @@ To hide that wait, `docs/index.html` is a small launcher page served free by Git
 
 There's no public dataset that links real invoices to purchase orders and a vendor list (companies keep that private), so the data here is built to follow real Indian GST rules. Every company is fictional. The GSTINs have real state codes and pass the official check-digit test, but belong to no one.
 
-**The buyer** is RJ Garments Pvt Ltd, a garment maker in Tiruppur, Tamil Nadu. It buys from six vendors:
+**The buyer** is RJ Garments Pvt Ltd, a garment maker in Tiruppur, Tamil Nadu. It buys from eight vendors, two of them small local shops without a GSTIN:
 
 | Vendor | Where | Supplies |
 |---|---|---|
@@ -87,6 +88,8 @@ There's no public dataset that links real invoices to purchase orders and a vend
 | Coromandel Facility Services | Chennai | housekeeping, pest control |
 | Konkan Tech Hardware | Mumbai | laptops, barcode scanners |
 | Deccan Electricals | Hyderabad | blocked after failing a KYC check |
+| Selvi Thread & Needle Store | Tiruppur | thread, needles, elastic; no GSTIN, hand-written bill book |
+| Kumaran Tailoring Supplies | Tiruppur | tailoring supplies; GST registration applied for |
 
 **The thirteen invoices** come in three different layouts, like real vendors' invoices would. 05, 06 and 12 are scans with no selectable text, and 11 is a phone photo.
 
@@ -108,7 +111,7 @@ There's no public dataset that links real invoices to purchase orders and a vend
 
 Order matters for two of them: 05 is only a duplicate once 01 is saved, and 04 only goes over the order once 03 is saved. `check_invoices.py --all` and the guided tour both run them in the right order.
 
-**Want to try more?** `test_bills/` has 22 more invoices it has never seen, one problem each: an unknown vendor, an invalid GSTIN, a bill made out to another company, a wrong total, GST at the wrong rate, a future date, a made-up order number, a quotation pretending to be an invoice, and more. Its README lists what each one should get.
+**Want to try more?** `test_bills/` has 27 more invoices it has never seen, one problem each: an unknown vendor, an invalid GSTIN, a bill made out to another company, a wrong total, GST at the wrong rate, a future date, a made-up order number, a quotation pretending to be an invoice, hand-written bills from small shops, GST charged without a GSTIN, a big cash bill, and more. Its README lists what each one should get.
 
 ## Assumptions
 
@@ -119,6 +122,9 @@ These are written into `data/rules.json` and shown on the app's Rules page.
 - **Invoices are matched to the purchase order only.** Matching against goods received (a "3-way match") is left out.
 - **Every item is taxed at 18%,** to keep the test data simple.
 - **An invoice number can't repeat within a financial year,** as GST rules require. That's what makes duplicates detectable.
+- **Small suppliers without a GSTIN:** a business with turnover under ₹40 lakh (goods) or ₹20 lakh (services) doesn't have to register for GST, and an unregistered business can't charge it (CGST Act s.32). Their bills are paid without GST credit. If one adds GST anyway, the bill is held.
+- **Purchases up to ₹6,000 don't need a purchase order.** It's a company setting in `rules.json`, kept low because small suppliers are paid without the GST checks. A first bill from a supplier not on the list is held for the buyer to confirm if it's under this; above it, it's rejected like any unknown vendor.
+- **Over ₹10,000 must go by bank.** Cash payments above ₹10,000 a day to one person can't be claimed as a business expense (Income Tax s.40A(3)), so a bill like that with no bank details anywhere is held.
 - **An order is only worked out automatically when BillClerk is at least 85% sure** and the next best match is clearly behind. Otherwise a person picks.
 
 ## What's where
@@ -140,7 +146,7 @@ data/
   correct_answers.json the right reading and decision for each test invoice
   saved_readings/      Gemini's readings, so a file is only read once
 invoices/              the 13 test invoices
-test_bills/            22 more invoices to upload yourself, one problem each
+test_bills/            27 more invoices to upload yourself, one problem each
 scripts/               makes the test data, checks it, and pre-draws invoice previews
 check_invoices.py      runs invoices from the command line
 start_app.py           starts the web app

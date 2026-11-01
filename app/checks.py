@@ -190,18 +190,53 @@ class Run:
                       vendor_msg="This invoice has been altered by hand" + (f" ({f['handwritten_notes'].rstrip('.')})" if f.get("handwritten_notes") else "") +
                                  ". We can't accept handwritten changes on a GST tax invoice. Please send a revised invoice, "
                                  "or raise a debit note for any additional charge.")
-        missing = [k for k in ("vendor_gstin", "invoice_number", "invoice_date", "total")
-                   if not f.get(k)] + ([] if f.get("line_items") else ["line_items"])
+        # A supplier without a GSTIN can still send a valid bill (a cash memo, a bill-book bill):
+        # it just isn't a tax invoice. Such bills often have no printed number either.
+        tax_charged = sum(to_amount(f.get(k)) or 0 for k in ("cgst", "sgst", "igst"))
+        unregistered = not f.get("vendor_gstin")
+        self.ctx["unregistered"] = unregistered
+        need = ("invoice_date", "total") if unregistered else ("vendor_gstin", "invoice_number", "invoice_date", "total")
+        missing = [k for k in need if not f.get(k)] + ([] if f.get("line_items") else ["line_items"])
         checks.append(dict(label="Required fields present", ok=not missing,
                            detail=", ".join(missing) or "all present"))
+        if f.get("written_by_hand") and not hw:
+            checks.append(dict(label="Written by hand", ok=None, detail="a bill-book or hand-written bill; amounts double-checked below"))
+            self.flag("validate", "INFO", "HANDWRITTEN_BILL", "A hand-written bill (bill book or cash memo).",
+                      short="Hand-written bill")
+        if unregistered:
+            applied = (f.get("gst_registration") or "").lower() == "applied"
+            arn = f.get("gst_arn")
+            checks.append(dict(label="Supplier's GST registration", ok=None,
+                               detail=("applied for" + (f", ARN {arn}" if arn else "")) if applied else "no GSTIN on the bill"))
+            if tax_charged > 0.5:
+                self.flag("validate", "HOLD", "GST_WITHOUT_GSTIN",
+                          f"The bill charges {inr(tax_charged)} GST but shows no GSTIN"
+                          + (" (registration is only applied for)" if applied else "")
+                          + ". A business that isn't registered can't collect GST (CGST Act, section 32), and we couldn't claim it back.",
+                          audience="vendor", action="Pay only the amount before GST, or ask the supplier for their GSTIN and a proper tax invoice.",
+                          short=f"Charges {inr(tax_charged)} GST but has no GSTIN" + (" (registration only applied for)" if applied else "") + ".",
+                          vendor_msg=f"Your bill adds {inr(tax_charged)} GST, but it doesn't show a GSTIN"
+                                     + (" (your registration is still being processed)" if applied else "")
+                                     + ". GST can only be charged once you're registered. Please send the bill without GST, "
+                                     "or a tax invoice with your GSTIN.")
+            elif applied:
+                self.flag("validate", "INFO", "GST_APPLIED",
+                          f"The supplier's GST registration is still being processed{f' (ARN {arn})' if arn else ''}, so no GST is charged.",
+                          action="Ask the supplier to send GST invoices once their GSTIN is issued.",
+                          short="GST registration applied for; no GST charged")
+            else:
+                self.flag("validate", "INFO", "NOT_TAX_INVOICE",
+                          "The supplier has no GSTIN and charges no GST: a valid bill, but not a tax invoice, so there's no GST credit to claim.",
+                          short="Not a tax invoice, so no GST credit")
         if missing:
             self.flag("validate", "HOLD", "MISSING_FIELD",
                       f"The invoice is missing: {', '.join(m.replace('_', ' ') for m in missing)}.",
                       audience="vendor", action="Ask the vendor to resend the invoice with these details.")
 
         conf = f.get("confidence") or {}
+        # only fields that are actually on the bill (a missing PO or GSTIN can't be "read badly")
         low = {k: v for k, v in conf.items() if v is not None and v < pol["extraction_min_confidence"]
-               and not (k == "po_reference" and not f.get("po_reference"))}
+               and (f.get(k) if k != "line_items" else f.get("line_items"))}
         checks.append(dict(label=f"Reading confidence ≥ {pol['extraction_min_confidence']:.0%}",
                            ok=not low, detail=", ".join(f"{k} {v:.0%}" for k, v in low.items()) or
                            f"lowest {min(conf.values()):.0%}" if conf else "n/a"))
@@ -279,25 +314,46 @@ class Run:
     def s_vendor(self):
         f, checks = self.ctx["f"], []
         gst = (f.get("vendor_gstin") or "").upper()
-        v = next((x for x in self.vendors if x["gstin"] == gst), None)
+        digits = lambda x: "".join(ch for ch in (x or "") if ch.isdigit())[-10:]  # noqa: E731  last 10 digits of a phone number
+        v = next((x for x in self.vendors if gst and x["gstin"] == gst), None)
         how = "GSTIN"
+        if not v and f.get("vendor_phone") and len(digits(f["vendor_phone"])) == 10:
+            # small suppliers have no GSTIN, but their phone number is on every bill
+            v = next((x for x in self.vendors if digits(x.get("phone")) == digits(f["vendor_phone"])), None)
+            how = "phone number"
         if not v and f.get("vendor_name"):
             best = max(self.vendors, key=lambda x: similar(x["name"], f["vendor_name"]))
             score = similar(best["name"], f["vendor_name"])
             if score >= 90:
                 v, how = best, f"name ({score:.0f}% match)"
-                self.flag("vendor", "HOLD", "GSTIN_NOT_ON_FILE",
-                          f"Vendor name matches {best['name']}, but the GSTIN on the invoice ({gst}) is not the one on file ({best['gstin']}).",
-                          audience="internal", action="Procurement to confirm the vendor's GSTIN before payment.")
+        if v and how != "GSTIN" and v["gstin"]:
+            # a registered supplier's bill must carry its GSTIN, and the right one
+            self.flag("vendor", "HOLD", "GSTIN_NOT_ON_FILE",
+                      f"Matched to {v['name']} by {how}, but the GSTIN on the invoice ({gst or 'none'}) is not the one on file ({v['gstin']}).",
+                      audience="internal", action="Procurement to confirm the vendor's GSTIN before payment.",
+                      short=(f"{v['name']}'s GSTIN is missing from this bill." if not gst else
+                             f"The GSTIN {gst} isn't the one on file for {v['name']}."))
         checks.append(dict(label="Vendor found in vendor master", ok=v is not None,
-                           detail=f"{v['vendor_id']} · {v['name']} (matched by {how})" if v else f"no vendor with GSTIN {gst}"))
+                           detail=f"{v['vendor_id']} · {v['name']} (matched by {how})" if v else
+                           f"no vendor with GSTIN {gst}" if gst else "no matching name or phone number"))
         if not v:
-            self.flag("vendor", "REJECT", "UNKNOWN_VENDOR",
-                      f"{f.get('vendor_name') or 'This vendor'} ({gst}) is not an approved vendor.",
-                      audience="internal", action="Send to procurement; vendor must be onboarded before any payment.",
-                      short=f"{f.get('vendor_name') or 'This vendor'} isn't one of our approved vendors.")
+            name = f.get("vendor_name") or "This supplier"
+            name = name.title() if name.isupper() else name   # bill books print shop names in capitals
+            if self.ctx.get("unregistered") and (self.ctx.get("total") or 0) <= self.policy["petty_limit_inr"]:
+                # a small local shop we haven't bought from before: fine for a small amount, if someone vouches for it
+                self.flag("vendor", "HOLD", "NEW_SMALL_SUPPLIER",
+                          f"{name} isn't on our supplier list. It's a small bill (up to {inr(self.policy['petty_limit_inr'])}), "
+                          "so it can be paid once the person who made the purchase confirms it.",
+                          audience="internal", action="The person who made the purchase confirms it; procurement adds the supplier if we'll buy again.",
+                          short=f"First bill from {name}: the person who made the purchase should confirm it.")
+            else:
+                self.flag("vendor", "REJECT", "UNKNOWN_VENDOR",
+                          f"{name}{f' ({gst})' if gst else ''} is not an approved vendor.",
+                          audience="internal", action="Send to procurement; vendor must be onboarded before any payment.",
+                          short=f"{name} isn't one of our approved vendors.")
             self.ctx["vendor"] = None
-            return "Vendor not recognised", checks, {}
+            self._cash_check(None)
+            return "Supplier not on our list", checks, {}
         self.ctx["vendor"] = v
         active = v["status"] == "approved"
         checks.append(dict(label="Vendor is active", ok=active,
@@ -309,7 +365,13 @@ class Run:
                       short=f"Vendor is blocked: {v['block_reason'] or v['status']}.")
         acct = "".join(ch for ch in (f.get("bank_account") or "") if ch.isalnum())
         ifsc = (f.get("ifsc") or "").upper().strip()
-        if acct:
+        if acct and not v["bank_account"]:
+            checks.append(dict(label="Bank details", ok=None, detail=f"none on file; the bill gives …{acct[-4:]}"))
+            self.flag("vendor", "INFO", "BANK_FROM_BILL",
+                      f"We have no bank details on file for {v['name']}; the bill gives an account ending {acct[-4:]}.",
+                      action=f"Confirm the account with {v['name']} by phone before the first payment.",
+                      short="Bank details taken from the bill; confirm by phone first")
+        elif acct:
             same = acct == v["bank_account"] and (not ifsc or ifsc == v["ifsc"])
             checks.append(dict(label="Bank details match the vendor master", ok=same,
                                detail=f"invoice {f.get('bank_name') or ''} …{acct[-4:]} / {ifsc} vs on file {v['bank_name']} …{v['bank_account'][-4:]} / {v['ifsc']}"))
@@ -323,11 +385,29 @@ class Run:
                           short=f"Bank account changed to …{acct[-4:]} (on file: …{v['bank_account'][-4:]}). Possible payment fraud.")
         else:
             checks.append(dict(label="Bank details match the vendor master", ok=None, detail="not printed; we pay to the account on file"))
-        return f"{v['name']}, approved vendor", checks, dict(vendor_id=v["vendor_id"], vendor_name=v["name"])
+        self._cash_check(v)
+        kind = "approved vendor" if v["gstin"] else "regular supplier, no GSTIN"
+        return f"{v['name']}, {kind}", checks, dict(vendor_id=v["vendor_id"], vendor_name=v["name"])
+
+    def _cash_check(self, v):
+        """A big bill with no bank account anywhere would have to be paid in cash, and cash over
+        Rs 10,000 a day to one person isn't allowed as a business expense (Income Tax Act, s. 40A(3))."""
+        f, limit = self.ctx["f"], self.policy["cash_limit_inr"]
+        has_bank = (v and v["bank_account"]) or f.get("bank_account")
+        if not has_bank and (self.ctx.get("total") or 0) > limit:
+            self.flag("vendor", "HOLD", "CASH_LIMIT",
+                      f"There are no bank details for this {inr(self.ctx['total'])} bill. Paying more than {inr(limit)} in cash to "
+                      "one person in a day isn't allowed as a business expense (Income Tax Act, section 40A(3)).",
+                      audience="vendor", action="Get the supplier's bank account or UPI ID and pay electronically.",
+                      short=f"No bank details for a {inr(self.ctx['total'])} bill; over {inr(limit)} it can't be paid in cash.",
+                      vendor_msg="Please share your bank account or UPI details; we can't pay bills of this size in cash.")
 
     def s_gst(self):
         f, v = self.ctx["f"], self.ctx.get("vendor")
         checks = []
+        if self.ctx.get("unregistered"):
+            # no GSTIN: no GST may be charged at all (checked with the document), so there's nothing to split or rate
+            return ("No GST: the supplier isn't registered" if self.ctx["tax"] < 0.5 else "GST charged without a GSTIN"), [], {}
         supplier_state = (f.get("vendor_gstin") or (v or {}).get("gstin") or "")[:2]
         pos = f.get("place_of_supply") or ""
         pos_code = "".join(ch for ch in pos if ch.isdigit())[:2] or self.buyer["state_code"]
@@ -439,10 +519,20 @@ class Run:
                       audience="vendor", action="Remind the vendor to quote the PO number on future invoices.")
             return f"{top['po_number']}, worked out from the items ({top['confidence']:.0%} match)", checks, dict(po_number=top["po_number"], inferred=True, candidates=scored)
         self.ctx["po"] = None
+        petty = self.policy["petty_limit_inr"]
+        if (self.ctx.get("total") or 0) <= petty:
+            # small everyday buys (thread, tea, a repair) rarely have a purchase order
+            self.flag("po", "INFO", "PETTY_NO_PO",
+                      f"No purchase order, which is fine for a small purchase (up to {inr(petty)}).",
+                      short=f"no order needed under {inr(petty)}")
+            return f"No order needed: under {inr(petty)}", checks, dict(candidates=scored[:2])
         self.flag("po", "HOLD", "PO_UNCLEAR",
-                  "No PO on the invoice and no open PO is a clear match. Closest: " +
-                  ("; ".join(f"{s['po_number']} ({s['confidence']:.0%})" for s in scored[:2]) or "none") + ".",
-                  audience="internal", action="AP clerk to pick the right PO, or ask the vendor.")
+                  ("No PO on the invoice and no open PO is a clear match. Closest: " +
+                   "; ".join(f"{s['po_number']} ({s['confidence']:.0%})" for s in scored[:2]) + ".") if scored else
+                  f"No PO on the bill, there's no open order with {v['name']}, and it's over the {inr(petty)} limit for small purchases.",
+                  audience="internal", action="AP clerk to pick the right PO, or ask the vendor." if scored else
+                  "Get the purchase approved (or an order raised) before paying.",
+                  short=None if scored else f"No purchase order, and over the {inr(petty)} limit for small purchases.")
         return "Could not identify the PO", checks, dict(candidates=scored[:2])
 
     def s_duplicate(self):
@@ -454,6 +544,19 @@ class Run:
         fy = financial_year(d) if d else None
         self.ctx.update(serial=serial, fy=fy)
         past = records.history(self.con, v["vendor_id"])
+        if serial is None:
+            # bills without a number (common in bill books): same supplier, same day, same amount is suspicious
+            same_day = [h for h in past if d and h["invoice_date"] == d.isoformat() and abs(h["total"] - self.ctx["total"]) <= 1]
+            checks = [dict(label="Not already processed", ok=not same_day,
+                           detail="no bill number, so compared by supplier, date and amount" +
+                                  (f": matches one saved {h['saved_at'][:10]}" if (h := (same_day or [None])[0]) else ""))]
+            if same_day:
+                self.flag("duplicate", "HOLD", "POSSIBLE_DUPLICATE",
+                          f"This bill has no number, and a bill from {v['name']} for the same amount on the same date is already in records.",
+                          audience="internal", action="Check with the person who made the purchase whether this was bought twice.",
+                          short=f"Same supplier, date and amount ({inr(self.ctx['total'])}) as a bill already in records.")
+                return "Possible duplicate", checks, {}
+            return "Not in records yet", checks, {}
         same_no = [h for h in past if h["invoice_serial"] == serial and h["financial_year"] == fy]
         checks = [dict(label="Fingerprint", ok=None,
                        detail=f"vendor {v['vendor_id']} · FY {fy} · serial {serial} · total {inr(self.ctx['total'])}"
@@ -631,6 +734,14 @@ class Run:
                 yield self.stage("decide", "Decide", self.s_decide)
                 break
 
+    def _pay_step(self, v, f):
+        if v and v.get("bank_account"):
+            return "Schedule payment on the vendor's terms to the account on file."
+        if f.get("bank_account"):
+            return "Pay to the bank account printed on the bill, after confirming it with the supplier by phone."
+        how = f" (call {v['phone']} to arrange)" if v and v.get("phone") else ""
+        return f"Pay by UPI or cash against a signed receipt{how}; no bank account is on file."
+
     def result(self):
         decision = self.ctx.get("decision", "HOLD")
         f, v = self.ctx.get("f") or {}, self.ctx.get("vendor")
@@ -641,7 +752,10 @@ class Run:
         if decision == "APPROVE":
             headline = f"Pay {inr(self.ctx.get('total') or 0)} to {v['name']}"
             if info:
-                headline += " (" + "; ".join(x["short"].rstrip(".") for x in info) + ")"
+                # notes read as one sentence: "(hand-written bill; not a tax invoice, ...)", keeping acronyms like PO intact
+                notes = [x["short"].rstrip(".") for x in info]
+                notes = [n[0].lower() + n[1:] if len(n) > 1 and n[1].islower() else n for n in notes]
+                headline += " (" + "; ".join(notes) + ")"
         else:
             headline = blocking[0]["short"]
         from .emails import draft_emails
@@ -650,7 +764,7 @@ class Run:
                    notes=[x["message"] for x in info],
                    next_actions=list(dict.fromkeys(x["action"] for x in (
                        [y for y in blocking if y["code"] == "HANDWRITTEN_CHANGES"] or blocking + info) if x["action"])) or
-                   ["Schedule payment on the vendor's terms to the account on file."],
+                   [self._pay_step(v, f)],
                    vendor=v and {"id": v["vendor_id"], "name": v["name"]},
                    invoice=dict(number=f.get("invoice_number"), date=str(self.ctx.get("date")),
                                 po=(self.ctx.get("po") or {}).get("po_number"),

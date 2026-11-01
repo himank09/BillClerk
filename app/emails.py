@@ -47,7 +47,7 @@ def draft_emails(run, decision):
         bullets = "" if codes & {"DUPLICATE", "VENDOR_BLOCKED"} else "\n" + "\n".join(f"  • {x['vendor_msg']}" for x in vendor_items)
         body = (f"Dear {v['name']} team,\n\n{opening}{bullets}\n\n{ask}\n\n"
                 f"Regards,\nAccounts Payable\n{run.buyer['name']}")
-        emails.append(dict(audience="vendor", to=v["email"], subject=subject, body=body))
+        emails.append(dict(audience="vendor", to=v["email"] or f"no email on file; call or WhatsApp {v.get('phone') or 'the supplier'}", subject=subject, body=body))
 
     if internal_items:
         lines = "\n".join(f"  • {x['message']}\n    → {x['action']}" for x in internal_items)
@@ -65,5 +65,5 @@ def draft_emails(run, decision):
                 f"order number, so we matched it to {run.ctx['po']['po_number']} ourselves. To avoid delays, "
                 "please quote our PO number on future invoices.\n\n"
                 f"Regards,\nAccounts Payable\n{run.buyer['name']}")
-        emails.append(dict(audience="vendor", to=v["email"], subject=f"Invoice {inv_no}: please quote our PO number", body=body))
+        emails.append(dict(audience="vendor", to=v["email"] or f"no email on file; call or WhatsApp {v.get('phone') or 'the supplier'}", subject=f"Invoice {inv_no}: please quote our PO number", body=body))
     return emails

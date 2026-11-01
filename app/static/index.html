@@ -327,6 +327,8 @@ tr.click { cursor: pointer; } tr.click:hover { background: #FAFAFF; }
 .rules dt { font-weight: 700; margin-top: 0.75rem; }
 .rules dd { margin: 0.1rem 0 0; color: var(--ink-soft); }
 .rules .ass dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1.25rem; }
+.rules section.small { border-top-color: var(--hold); }
+.rules .small dl { grid-template-columns: repeat(4, 1fr); }
 .meter { height: 7px; background: var(--line-faint); border-radius: 4px; overflow: hidden; margin-top: 0.3rem; min-width: 90px; }
 .meter i { display: block; height: 100%; background: var(--violet); }
 .meter.over i { background: var(--reject); }
@@ -357,7 +359,7 @@ h2.table-h { font-size: 1.1rem; margin: 2rem 0 0.6rem; }
   .step .sum { grid-column: 2; font-size: 0.88rem; }
   .detail { margin-left: 0; }
   .progress { margin-left: 2.2rem; }
-  .rules, .rules .ass dl, .drawer .two { grid-template-columns: 1fr; }
+  .rules, .rules .ass dl, .rules .small dl, .drawer .two { grid-template-columns: 1fr; }
   .table-wrap { display: none; }
   .cards { display: grid; gap: 0.6rem; }
   .card { background: var(--white); border: 1px solid var(--line-faint); border-radius: 12px; padding: 0.8rem 0.9rem; text-align: left; width: 100%; display: grid; gap: 0.25rem; }
@@ -704,7 +706,9 @@ function renderRead(el, d) {
   const gst = f.igst ? [["IGST", f.igst]] : [["CGST", f.cgst], ["SGST", f.sgst]].filter(x => x[1]);
   const date = inv.date && inv.date !== "None" ? new Date(inv.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : (f.invoice_date || "–");
   el.innerHTML = `<section class="read" aria-label="What was read from the invoice">
-    <div class="read-head">${avatar(name)}<div><b>${esc(name)}</b><span>GSTIN ${esc(f.vendor_gstin || "not printed")}</span></div></div>
+    <div class="read-head">${avatar(name)}<div><b>${esc(name)}</b><span>${f.vendor_gstin ? "GSTIN " + esc(f.vendor_gstin)
+      : (f.gst_registration || "").toLowerCase() === "applied" ? "GST applied for" + (f.gst_arn ? " (ARN " + esc(f.gst_arn) + ")" : "")
+      : "No GSTIN: a small supplier"}${f.vendor_phone ? " · " + esc(f.vendor_phone) : ""}</span></div></div>
     <dl class="read-facts">
       <div><dt>Invoice</dt><dd>${esc(inv.number || "–")}</dd></div>
       <div><dt>Date</dt><dd>${esc(date)}</dd></div>
@@ -1000,6 +1004,12 @@ async function loadRules() {
     <dt>The vendor is blocked or unknown</dt><dd>Only approved vendors get paid.</dd>
     <dt>The order is closed or belongs to another vendor</dt><dd>Nothing more can be billed against it.</dd>
     <dt>It isn't an invoice</dt><dd>A CV, a report, a damaged file.</dd>
+  </dl></section>
+  <section class="ass small"><h2>Small suppliers without a GSTIN</h2><dl>
+    <div><dt>Their bills are fine</dt><dd>A bill-book or hand-written bill is valid. It isn't a tax invoice, so there's no GST credit to claim.</dd></div>
+    <div><dt>They can't charge GST</dt><dd>GST added without a GSTIN (or while registration is only applied for) is held: pay the amount before GST, or get a proper tax invoice.</dd></div>
+    <div><dt>Small buys don't need an order</dt><dd>Up to ${inr(p.petty_limit_inr)} without a purchase order. A first bill from a new shop is held until the buyer confirms it.</dd></div>
+    <div><dt>Big bills go by bank</dt><dd>Over ${inr(p.cash_limit_inr)} with no bank details is held: cash above that isn't allowed as a business expense.</dd></div>
   </dl></section>
   <section class="ass"><h2>Assumed for this demo</h2><dl>
     <div><dt>Checked against the order</dt><dd>Not yet against goods received.</dd></div>

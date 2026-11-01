@@ -1,7 +1,9 @@
-vendor_id,name,gstin,pan,address,state,state_code,bank_name,bank_account,ifsc,email,status,block_reason
-V001,Apex Office Supplies Pvt Ltd,33AAJCA3417L1ZQ,AAJCA3417L,"22, Ranganathan Street, T. Nagar, Chennai 600017",Tamil Nadu,33,HDFC Bank,50200041172839,HDFC0001842,billing@apexoffice.example,approved,
-V002,Bluewave IT Services LLP,29AAQFB7720M1ZT,AAQFB7720M,"4th Floor, 80 Feet Road, Koramangala, Bengaluru 560034",Karnataka,29,ICICI Bank,002105019874,ICIC0000021,accounts@bluewaveit.example,approved,
-V003,Sahyadri Industrial Packaging Pvt Ltd,27AAKCS5506P1ZQ,AAKCS5506P,"Plot 61, MIDC Bhosari, Pune 411026",Maharashtra,27,Bank of Maharashtra,60284417730,MAHB0000417,dispatch@sahyadripack.example,approved,
-V004,Coromandel Facility Services Pvt Ltd,33AAECC9183R1ZY,AAECC9183R,"8/3, Lattice Bridge Road, Adyar, Chennai 600020",Tamil Nadu,33,Indian Bank,7041128856,IDIB000A031,invoices@coromandelfs.example,approved,
-V005,Deccan Electricals & Traders,36ABCFD2290Q1Z1,ABCFD2290Q,"5-9-22, Abids Road, Hyderabad 500001",Telangana,36,State Bank of India,38817265541,SBIN0020063,deccanelec@example.com,blocked,Failed annual vendor KYC re-verification (Aug 2026)
-V006,Konkan Tech Hardware Pvt Ltd,27AAGCK6612D1ZQ,AAGCK6612D,"Unit 12, Lamington Road, Grant Road East, Mumbai 400007",Maharashtra,27,Kotak Mahindra Bank,9912245087,KKBK0000652,ar@konkantech.example,approved,
+vendor_id,name,gstin,pan,address,state,state_code,bank_name,bank_account,ifsc,email,phone,registration,status,block_reason
+V001,Apex Office Supplies Pvt Ltd,33AAJCA3417L1ZQ,AAJCA3417L,"22, Ranganathan Street, T. Nagar, Chennai 600017",Tamil Nadu,33,HDFC Bank,50200041172839,HDFC0001842,billing@apexoffice.example,+91 44 2434 1180,registered,approved,
+V002,Bluewave IT Services LLP,29AAQFB7720M1ZT,AAQFB7720M,"4th Floor, 80 Feet Road, Koramangala, Bengaluru 560034",Karnataka,29,ICICI Bank,002105019874,ICIC0000021,accounts@bluewaveit.example,+91 80 4112 7720,registered,approved,
+V003,Sahyadri Industrial Packaging Pvt Ltd,27AAKCS5506P1ZQ,AAKCS5506P,"Plot 61, MIDC Bhosari, Pune 411026",Maharashtra,27,Bank of Maharashtra,60284417730,MAHB0000417,dispatch@sahyadripack.example,+91 20 2712 5506,registered,approved,
+V004,Coromandel Facility Services Pvt Ltd,33AAECC9183R1ZY,AAECC9183R,"8/3, Lattice Bridge Road, Adyar, Chennai 600020",Tamil Nadu,33,Indian Bank,7041128856,IDIB000A031,invoices@coromandelfs.example,+91 44 2446 9183,registered,approved,
+V005,Deccan Electricals & Traders,36ABCFD2290Q1Z1,ABCFD2290Q,"5-9-22, Abids Road, Hyderabad 500001",Telangana,36,State Bank of India,38817265541,SBIN0020063,deccanelec@example.com,+91 40 2320 2290,registered,blocked,Failed annual vendor KYC re-verification (Aug 2026)
+V006,Konkan Tech Hardware Pvt Ltd,27AAGCK6612D1ZQ,AAGCK6612D,"Unit 12, Lamington Road, Grant Road East, Mumbai 400007",Maharashtra,27,Kotak Mahindra Bank,9912245087,KKBK0000652,ar@konkantech.example,+91 22 2386 6612,registered,approved,
+V007,Selvi Thread & Needle Store,,,"12, Kamaraj Street, Khaderpet, Tiruppur 641601",Tamil Nadu,33,,,,,+91 98432 17760,unregistered,approved,
+V008,Kumaran Tailoring Supplies,,,"45, Palladam Road, Tiruppur 641604",Tamil Nadu,33,,,,kumarantailoring@example.com,+91 94433 52081,applied,approved,

@@ -44,6 +44,11 @@ class Confidence(BaseModel):
 class Invoice(BaseModel):
     vendor_name: str | None = None
     vendor_gstin: str | None = None
+    vendor_phone: str | None = None
+    vendor_address: str | None = None
+    gst_registration: str | None = Field(None, description="'registered' if a GSTIN is printed, 'applied' if it says GST applied for "
+                                         "or shows a GST application number (ARN), 'none' otherwise")
+    gst_arn: str | None = Field(None, description="GST application reference number (ARN), if printed")
     buyer_name: str | None = None
     buyer_gstin: str | None = None
     invoice_number: str | None = None
@@ -61,16 +66,19 @@ class Invoice(BaseModel):
     ifsc: str | None = None
     is_invoice: bool = Field(description="true only if this is a supplier invoice or bill; false for anything else")
     document_type: str | None = Field(None, description="what the document is, in a few words, e.g. 'tax invoice', 'resume', 'quotation'")
-    has_handwritten_changes: bool = Field(False, description="true if anything was added, crossed out or rewritten by hand")
+    written_by_hand: bool = Field(False, description="true if the whole bill was filled in by hand, e.g. a bill book or cash memo")
+    has_handwritten_changes: bool = Field(False, description="true only if a printed or typed bill was altered by hand afterwards")
     handwritten_notes: str | None = Field(None, description="what was changed by hand, in one or two sentences")
     confidence: Confidence
 
 
-PROMPT = """You are reading a document sent to an accounts payable team. It should be an Indian GST tax invoice.
-First decide whether it is a supplier invoice or bill at all, and always fill in is_invoice and
-document_type. If it is not an invoice (a resume, a report, a quotation, a purchase order, a letter,
-a photo of something else), set is_invoice to false, say what it is in document_type, and leave the
-invoice fields null.
+PROMPT = """You are reading a document sent to an accounts payable team. It is usually an Indian GST tax invoice,
+but small suppliers also send simpler bills: a cash memo or credit memo from a bill book filled in by hand,
+a bill of supply, or a plain printed bill with no GSTIN.
+First decide whether it is a supplier invoice or bill asking to be paid, and always fill in is_invoice and
+document_type. Cash memos, bill-book bills and bills of supply count as bills. If it is not a bill (a resume,
+a report, a quotation, an estimate, a purchase order, a letter, a photo of something else), set is_invoice to
+false, say what it is in document_type, and leave the invoice fields null.
 Otherwise, extract the fields exactly as they appear on the document.
 Rules:
 - Copy identifiers (GSTIN, invoice number, PO number, account number, IFSC) character for character.
@@ -78,10 +86,15 @@ Rules:
 - Amounts are plain numbers in rupees, no commas or currency symbols.
 - If a field is not printed on the invoice, return null. Never guess, especially the PO reference.
 - Put CGST, SGST and IGST amounts in their own fields; leave the ones not charged as null.
-- Look for anything written by hand: added lines, struck-out amounts, rewritten totals. If there is any,
-  set has_handwritten_changes to true and describe it in handwritten_notes. In the other fields, give the
-  values as they stand after the handwritten changes (include handwritten line items), and lower the
-  confidence for any value that is handwritten or hard to read.
+- If the whole bill was filled in by hand (a bill book, a cash memo), set written_by_hand to true. That is normal
+  for small shops and is not a change.
+- Separately, look for a printed or typed bill that was altered by hand: added lines, struck-out amounts,
+  rewritten totals. Only then set has_handwritten_changes to true and describe it in handwritten_notes.
+- For anything handwritten, give the values as written (include handwritten line items), and lower the
+  confidence for any value that is hard to read.
+- Copy the supplier's phone number and address if printed. If there is no GSTIN, set vendor_gstin to null and
+  say in gst_registration whether GST registration is applied for (copy the ARN into gst_arn) or not mentioned.
+- A bill without a bill number, PO, or line-wise GST is fine: leave those fields null rather than guessing.
 - confidence: for each listed field, 0-1, how sure you are you read it correctly
   (lower it for blurry scans, handwriting, or anything you had to infer)."""
 

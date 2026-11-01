@@ -358,8 +358,9 @@ def setup():
                             lines=[dict(description=l["description"], qty=l["qty"], unit=l["unit"],
                                         unit_price=l["unit_price"]) for l in p["lines"]]))
     con.close()
-    vend = [dict(id=v["vendor_id"], name=v["name"], gstin=v["gstin"], state=v["state"],
-                 bank=f"{v['bank_name']} …{v['bank_account'][-4:]}", status=v["status"],
+    vend = [dict(id=v["vendor_id"], name=v["name"], state=v["state"],
+                 gstin=v["gstin"] or ("Applied for" if v.get("registration") == "applied" else "None (small supplier)"),
+                 bank=f"{v['bank_name']} …{v['bank_account'][-4:]}" if v["bank_account"] else "None on file", status=v["status"],
                  block_reason=v["block_reason"]) for v in vendors]
     return dict(buyer=buyer, policy=policy, vendors=vend, pos=po_rows,
                 extractor="mock" if os.environ.get("EXTRACTOR") == "mock" else "gemini")

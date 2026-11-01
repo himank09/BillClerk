@@ -25,40 +25,48 @@ BUYER = {
 
 # bank details on file = what the vendor submitted at onboarding
 VENDORS = [
-    dict(vendor_id="V001", name="Apex Office Supplies Pvt Ltd",
+    dict(vendor_id="V001", phone="+91 44 2434 1180", registration="registered", name="Apex Office Supplies Pvt Ltd",
          address="22, Ranganathan Street, T. Nagar, Chennai 600017",
          state="Tamil Nadu", state_code="33", pan="AAJCA3417L",
          bank_name="HDFC Bank", bank_account="50200041172839", ifsc="HDFC0001842",
          email="billing@apexoffice.example", status="approved"),
-    dict(vendor_id="V002", name="Bluewave IT Services LLP",
+    dict(vendor_id="V002", phone="+91 80 4112 7720", registration="registered", name="Bluewave IT Services LLP",
          address="4th Floor, 80 Feet Road, Koramangala, Bengaluru 560034",
          state="Karnataka", state_code="29", pan="AAQFB7720M",
          bank_name="ICICI Bank", bank_account="002105019874", ifsc="ICIC0000021",
          email="accounts@bluewaveit.example", status="approved"),
-    dict(vendor_id="V003", name="Sahyadri Industrial Packaging Pvt Ltd",
+    dict(vendor_id="V003", phone="+91 20 2712 5506", registration="registered", name="Sahyadri Industrial Packaging Pvt Ltd",
          address="Plot 61, MIDC Bhosari, Pune 411026",
          state="Maharashtra", state_code="27", pan="AAKCS5506P",
          bank_name="Bank of Maharashtra", bank_account="60284417730", ifsc="MAHB0000417",
          email="dispatch@sahyadripack.example", status="approved"),
-    dict(vendor_id="V004", name="Coromandel Facility Services Pvt Ltd",
+    dict(vendor_id="V004", phone="+91 44 2446 9183", registration="registered", name="Coromandel Facility Services Pvt Ltd",
          address="8/3, Lattice Bridge Road, Adyar, Chennai 600020",
          state="Tamil Nadu", state_code="33", pan="AAECC9183R",
          bank_name="Indian Bank", bank_account="7041128856", ifsc="IDIB000A031",
          email="invoices@coromandelfs.example", status="approved"),
-    dict(vendor_id="V005", name="Deccan Electricals & Traders",
+    dict(vendor_id="V005", phone="+91 40 2320 2290", registration="registered", name="Deccan Electricals & Traders",
          address="5-9-22, Abids Road, Hyderabad 500001",
          state="Telangana", state_code="36", pan="ABCFD2290Q",
          bank_name="State Bank of India", bank_account="38817265541", ifsc="SBIN0020063",
          email="deccanelec@example.com", status="blocked",
          block_reason="Failed annual vendor KYC re-verification (Aug 2026)"),
-    dict(vendor_id="V006", name="Konkan Tech Hardware Pvt Ltd",
+    dict(vendor_id="V006", phone="+91 22 2386 6612", registration="registered", name="Konkan Tech Hardware Pvt Ltd",
          address="Unit 12, Lamington Road, Grant Road East, Mumbai 400007",
          state="Maharashtra", state_code="27", pan="AAGCK6612D",
          bank_name="Kotak Mahindra Bank", bank_account="9912245087", ifsc="KKBK0000652",
          email="ar@konkantech.example", status="approved"),
+    # small local suppliers with no GSTIN: below the turnover limit, or registration still in progress.
+    # They bill from a bill book or a simple printed memo, and take payment by UPI or cash.
+    dict(vendor_id="V007", phone="+91 98432 17760", registration="unregistered", name="Selvi Thread & Needle Store",
+         address="12, Kamaraj Street, Khaderpet, Tiruppur 641601", state="Tamil Nadu", state_code="33", pan="",
+         bank_name="", bank_account="", ifsc="", email="", status="approved"),
+    dict(vendor_id="V008", phone="+91 94433 52081", registration="applied", name="Kumaran Tailoring Supplies",
+         address="45, Palladam Road, Tiruppur 641604", state="Tamil Nadu", state_code="33", pan="",
+         bank_name="", bank_account="", ifsc="", email="kumarantailoring@example.com", status="approved"),
 ]
 for v in VENDORS:
-    v["gstin"] = make(v["state_code"], v["pan"])
+    v["gstin"] = make(v["state_code"], v["pan"]) if v["pan"] else ""
     v.setdefault("block_reason", "")
 
 # Purchase orders. rate/qty are pre-tax; gst_rate applies per line.
@@ -118,7 +126,7 @@ def main():
     (DATA / "buyer.json").write_text(json.dumps(BUYER, indent=2))
 
     vcols = ["vendor_id", "name", "gstin", "pan", "address", "state", "state_code",
-             "bank_name", "bank_account", "ifsc", "email", "status", "block_reason"]
+             "bank_name", "bank_account", "ifsc", "email", "phone", "registration", "status", "block_reason"]
     with open(DATA / "vendors.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=vcols)
         w.writeheader()
@@ -147,6 +155,8 @@ def main():
         "tolerance": {"percent": 1.0, "absolute_inr": 500,
                       "rule": "tighter of the two governs, applied to cumulative taxable value per PO"},
         "approval_limit_inr": 500000,
+        "petty_limit_inr": 6000,
+        "cash_limit_inr": 10000,
         "duplicate_window_days": 365,
         "max_invoice_age_days": 365,
         "po_inference_min_confidence": 0.85,

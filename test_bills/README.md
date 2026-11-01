@@ -30,6 +30,13 @@ Invoices BillClerk has never seen, one problem each. Upload them on the Check pa
 | T18b | October's IT bill sent again under a new number | **Hold** | Same order and amount as T18a, just renumbered, which is how double payments slip through. |
 | T19 | A quotation, not an invoice | **Reject** | Nothing is owed on a quotation; it should be removed from the invoice queue. |
 | T20 | A text file renamed to .pdf | **Reject** | It can't be opened as a PDF, so the sender is asked for a fresh copy. |
+| T21 | A hand-filled bill-book bill from a small shop, photographed | **Pay** | Selvi has no GSTIN and charges none, so it's a valid bill (not a tax invoice). Small purchase, no order needed. |
+| T22 | A shop we've never bought from, small amount | **Hold** | Not on the supplier list but under ₹6,000, so the person who bought it confirms rather than an outright reject. |
+| T23 | GST added by hand, but the shop has no GSTIN | **Hold** | A business that isn't registered can't charge GST (CGST Act s.32). Pay ₹3,450, not ₹4,071, or get a proper tax invoice. |
+| T24 | Shop's GST registration still in progress, no GST charged | **Pay** | Correct: GST can't be charged until the GSTIN is issued. Pay it, and ask for GST invoices once they have the number. |
+| T25 | ₹38,500 with no bank details and no order | **Hold** | Over ₹10,000 it can't be paid in cash (Income Tax s.40A(3)) and there are no bank details; also too big to buy without an order. |
+
+**T21 to T25 are from small local suppliers** of the kind every garment unit buys from: a thread shop with a hand-written bill book, a tailoring-supplies shop whose GST registration is still being processed. They have no GSTIN, so the GST checks change: their bills are valid, but they can't charge GST, buys up to ₹6,000 don't need an order, and big bills have to be paid by bank.
 
 T07 is dated 15 January 2027, so it only counts as "in the future" until then. T08 is caught twice: it's over a year old, and it's dated before the order it quotes.
 
