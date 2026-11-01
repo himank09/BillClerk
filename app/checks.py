@@ -18,7 +18,7 @@ from pathlib import Path
 from rapidfuzz import fuzz, utils
 
 from . import records
-from .read_invoice import extract, has_text_layer
+from .read_invoice import extract, has_text_layer, reread_date
 from .gstin import validate as gstin_check
 from .clean_values import (clean_po, financial_year, inr, invoice_serial,
                         parse_date, to_amount, words_to_amount)
@@ -367,11 +367,14 @@ class Run:
                       short="already paid at the counter, so we repay whoever paid")
 
         d = parse_date(f.get("invoice_date"))
+        d, date_unclear = self._second_look_at_date(f, d, checks)
         age = (date.today() - d).days if d else None
         ok_date = d is not None and 0 <= age <= pol["max_invoice_age_days"]
         checks.append(dict(label="Invoice date is valid", ok=ok_date,
                            detail=f"{f.get('invoice_date')} → {d.isoformat()}" if d else f"could not read '{f.get('invoice_date')}'"))
-        if not d:
+        if date_unclear:
+            pass   # already held as unclear: don't also call it stale or future
+        elif not d:
             self.flag("validate", "HOLD", "BAD_DATE", f"Could not understand the date '{f.get('invoice_date')}'.",
                       audience="internal", action="AP clerk to enter the invoice date.")
         elif age < 0:
@@ -385,6 +388,38 @@ class Run:
         self.ctx.update(date=d, taxable=taxable, tax=tax, total=total)
         return ("Complete, and the numbers add up",
                 checks, {})
+
+    def _second_look_at_date(self, f, d, checks):
+        """A hand-written year is easy to misread (a 6 taken for a 4 turns a new bill into a
+        two-year-old one). So if a hand-written bill's date comes out impossible, the date is read
+        a second time on its own before anything is decided. Returns (date to use, unclear?)."""
+        max_age = self.policy["max_invoice_age_days"]
+        odd = lambda x: x is not None and not (0 <= (date.today() - x).days <= max_age)  # noqa: E731
+        if not (f.get("written_by_hand") and odd(d)):
+            return d, False
+        second = reread_date(self.path, self.progress)
+        if not second or not second[0]:
+            return d, False
+        d2 = parse_date(second[0])
+        fmt = lambda x: x.strftime("%d %b %Y").lstrip("0")  # noqa: E731
+        checks.append(dict(label="Hand-written date read a second time", ok=None,
+                           detail=f"first read '{f.get('invoice_date')}', second read '{second[0]}'"))
+        if d2 == d and second[1]:
+            return d, False                       # both reads agree and the year is clear: the date really is odd
+        if d2 and not odd(d2) and second[1]:
+            self.flag("validate", "INFO", "DATE_REREAD",
+                      f"The hand-written date was first read as {f.get('invoice_date')}, which would make the bill "
+                      f"{'dated in the future' if d > date.today() else 'over a year old'}. A second, careful look at just the date "
+                      f"reads it as {second[0]} ({fmt(d2)}), so that's used. Glance at the date on the bill when you confirm it.",
+                      short=f"Hand-written date read twice: {fmt(d2)}")
+            return d2, False
+        options = " or ".join(dict.fromkeys(fmt(x) for x in (d, d2) if x))
+        self.flag("validate", "HOLD", "DATE_UNCLEAR",
+                  f"The hand-written date is hard to read: it was read as '{f.get('invoice_date')}' and, on a second look, "
+                  f"'{second[0]}'. A wrong year would make a new bill look old (or the other way round), so a person checks it.",
+                  audience="internal", action="Check the date on the bill, and with the person who bought the goods.",
+                  short=f"The hand-written date is unclear: it could be {options}.")
+        return (d2 if d2 and not odd(d2) else d), True
 
     def s_vendor(self):
         f, checks = self.ctx["f"], []
@@ -784,32 +819,38 @@ class Run:
         """Bill-book pages are used in order, and numbering usually starts again in April.
         So numbers are only compared within the same book and the same financial year."""
         d = self.ctx["date"]
-        this_year = [h for h in past if h["financial_year"] == fy and h["invoice_serial"] is not None]
-        same_book = [h for h in this_year if (h.get("book") or book) == book]
-        ahead = [h for h in same_book if h["invoice_serial"] > serial and h["invoice_date"] and h["invoice_date"] < d.isoformat()]
-        books = {h.get("book") for h in this_year if h.get("book")} | {book}
-        checks.append(dict(label="Bill number follows the earlier ones from this book", ok=not ahead,
-                           detail=(f"{book}, FY {fy}: no. {serial} comes after no. {max(h['invoice_serial'] for h in ahead)}"
-                                   if ahead else f"{book}, FY {fy}" + (", first bill from this book" if this_year and not same_book else ""))))
-        if ahead:
-            h = max(ahead, key=lambda x: x["invoice_serial"])
-            hd = date.fromisoformat(h["invoice_date"]).strftime("%d %b %Y").lstrip("0")
+        this_year = [h for h in past if h["financial_year"] == fy and h["invoice_serial"] is not None and h["invoice_date"]]
+        # within a year, a later bill should carry a higher number; a bill that breaks that order is "out of step"
+        out_of_step = [h for h in this_year if (h["invoice_serial"] > serial and h["invoice_date"] < d.isoformat())
+                       or (h["invoice_serial"] < serial and h["invoice_date"] > d.isoformat())]
+        same_book = [h for h in out_of_step if (h.get("book") or book) == book]
+        other_books = [h for h in out_of_step if (h.get("book") or book) != book]
+        parallel = {h.get("book") for h in other_books} | {book}
+        checks.append(dict(label="Bill number in step with the shop's earlier bills", ok=not same_book,
+                           detail=(f"{book}, FY {fy}: no. {serial} is out of step with no. {same_book[0]['invoice_serial']}" if same_book else
+                                   f"{book}, FY {fy}: out of step with a bill from another book" if other_books else
+                                   f"{book}, FY {fy}: in order")))
+        fmt = lambda x: date.fromisoformat(x).strftime("%d %b %Y").lstrip("0")  # noqa: E731
+        if same_book:
+            h = same_book[0]
             self.sign("duplicate", "SERIAL_BACKWARDS", True,
                       f"This is bill no. {f.get('invoice_number')}, dated {d.strftime('%d %b %Y').lstrip('0')}. But {v['name']} gave us bill "
-                      f"no. {h['invoice_number']} from the same bill book on {hd}. A bill book's pages are used in order, so a lower number "
-                      "can't come later. This page may have been kept back, or the bill may not be from them.",
-                      short=f"Bill no. {f.get('invoice_number')} is lower than no. {h['invoice_number']}, which {v['name']} gave us earlier ({hd}) from the same bill book.",
+                      f"no. {h['invoice_number']} from the same bill book on {fmt(h['invoice_date'])}. A bill book's pages are used in order, so "
+                      "the numbers and dates can't cross like this. This page may have been kept back, or the bill may not be from them.",
+                      short=f"Bill no. {f.get('invoice_number')} is out of order with no. {h['invoice_number']} ({fmt(h['invoice_date'])}) from the same bill book.",
                       action=f"Call {v['name']} on {v['phone']}, the number we have, and ask whether they wrote this bill.")
-        elif this_year and not same_book:
+        elif other_books:
+            h = other_books[0]
             self.sign("duplicate", "NEW_BILL_BOOK", False,
-                      f"This bill is from a different bill book than {v['name']}'s earlier bills this year ({book}). Many shops use two "
-                      "books at once, for cash and credit or for two counters, so on its own that's normal.",
-                      short=f"From another of {v['name']}'s bill books ({book}).")
-        if len(books) >= 3:
+                      f"This bill's number is out of step with {v['name']}'s bill no. {h['invoice_number']} ({fmt(h['invoice_date'])}), "
+                      f"which is from a different pad ({h.get('book')}). That usually means a second bill book in use at the same time, "
+                      "for cash and credit or for two counters. On its own that's normal.",
+                      short=f"Looks like a second bill book from {v['name']} ({book}).")
+        if len(parallel) >= 3:
             self.sign("duplicate", "MANY_BILL_BOOKS", False,
-                      f"{v['name']} has now used {len(books)} different bill books this year. A small shop rarely needs that many; a "
-                      "spare book in the wrong hands is one way fake bills are made.",
-                      short=f"{len(books)} different bill books from {v['name']} this year.")
+                      f"{v['name']} seems to have {len(parallel)} bill books in use at the same time. A small shop rarely needs that many; "
+                      "a spare book in the wrong hands is one way fake bills are made.",
+                      short=f"{len(parallel)} bill books from {v['name']} in use at once.")
 
     def s_match(self):
         f, po = self.ctx["f"], self.ctx.get("po")

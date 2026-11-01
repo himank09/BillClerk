@@ -151,6 +151,13 @@ def _rate_ok(request):
     return True
 
 
+def _safe_name(stem):
+    """A file name that is safe on disk but keeps letters in any script (Tamil, Hindi...)."""
+    import unicodedata
+    out = "".join(ch if unicodedata.category(ch)[0] in "LMN" or ch in "-." else "_" for ch in stem)
+    return re.sub(r"_+", "_", out).strip("._")[:60] or "invoice"
+
+
 @app.post("/api/upload")
 async def upload(request: Request, file: UploadFile = File(...)):
     if not _rate_ok(request):
@@ -165,10 +172,13 @@ async def upload(request: Request, file: UploadFile = File(...)):
         raise HTTPException(400, "That file is over 10 MB. Upload a smaller scan or photo.")
     UPLOADS.mkdir(parents=True, exist_ok=True)
     _purge_old()
-    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(file.filename).stem)[:60] or "invoice"
+    safe = _safe_name(Path(file.filename).stem)
     name = f"{time.strftime('%Y%m%d-%H%M%S')}-{os.urandom(2).hex()}_{safe}{ext}"  # unique even within a second
     (UPLOADS / name).write_bytes(data)
     return {"file": name}
+
+
+RUNNING, RUNNING_LOCK = {}, threading.Lock()   # file name -> pages waiting for its check
 
 
 @app.get("/api/run/{name}")
@@ -178,17 +188,32 @@ def run_stream(name: str):
     saved to history even if the browser's connection drops halfway."""
     path = _find(name)
     q = queue.Queue()
+    # one check per file at a time: a reconnect, or a second click, joins the check already
+    # running instead of starting another one (which would put the bill in history twice)
+    with RUNNING_LOCK:
+        start = name not in RUNNING
+        RUNNING.setdefault(name, []).append(q)
+
+    def send(item):
+        with RUNNING_LOCK:
+            listeners = list(RUNNING.get(name, []))
+        for lq in listeners:
+            lq.put(item)
 
     def work():
         try:
-            res = process(path, on_stage=lambda st: q.put(("stage", st)),
-                          on_progress=lambda m: q.put(("progress", {"message": m})))
-            q.put(("result", res))
+            res = process(path, on_stage=lambda st: send(("stage", st)),
+                          on_progress=lambda m: send(("progress", {"message": m})))
+            send(("result", res))
         except Exception as e:  # never leave the page hanging
-            q.put(("failed", {"message": f"Something went wrong running this invoice: {e}"}))
-        q.put(None)
+            send(("failed", {"message": f"Something went wrong running this invoice: {e}"}))
+        with RUNNING_LOCK:
+            listeners = RUNNING.pop(name, [])
+        for lq in listeners:
+            lq.put(None)
 
-    threading.Thread(target=work, daemon=True).start()
+    if start:
+        threading.Thread(target=work, daemon=True).start()
 
     def events():
         yield "retry: 100000\n\n"
@@ -240,9 +265,20 @@ def save_run(run_id: str):
     return {"saved": True}
 
 
+async def _json(request):
+    """The request's JSON body, or a clear 400 if it isn't valid JSON."""
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Couldn't read that request. Please try again.") from None
+    if not isinstance(body, dict):
+        raise HTTPException(400, "Couldn't read that request. Please try again.")
+    return body
+
+
 @app.post("/api/runs/{run_id}/confirm")
 async def confirm_run(run_id: str, request: Request):
-    body = await request.json()
+    body = await _json(request)
     con = records.connect()
     try:
         res = records.confirm(con, run_id, body.get("name"), bool(body.get("called")))
@@ -257,7 +293,10 @@ async def confirm_run(run_id: str, request: Request):
 @app.post("/api/vendors/{vendor_id}/phones")
 async def add_vendor_phone(vendor_id: str, request: Request):
     """A clerk called the shop on the number we have and they confirmed a second number is theirs."""
-    body = await request.json()
+    body = await _json(request)
+    _, _, vendors, _ = records.load_master()
+    if vendor_id not in {v["vendor_id"] for v in vendors}:
+        raise HTTPException(404, "No supplier with that ID.")
     con = records.connect()
     try:
         records.add_phone(con, vendor_id, body.get("phone"), body.get("name"))

@@ -13,6 +13,7 @@ data/correct_answers.json, which is handy for testing the rules offline.
 import hashlib
 import json
 import os
+import re
 import time
 from pathlib import Path
 
@@ -136,20 +137,63 @@ TRANSIENT = ("503", "unavailable", "429", "resource_exhausted", "overloaded", "t
              "500", "internal", "504", "deadline")
 
 
+def _today_note():
+    # a hand-written year is easy to misread (a 6 taken for a 4); knowing today's date helps the reader
+    return (f"\nToday's date is {time.strftime('%d %B %Y')}. Bills are usually recent, but copy every date exactly "
+            "as written; never change it to fit. In handwriting, look closely at digits that are easy to confuse "
+            "(4 and 6, 1 and 7, 3 and 8).")
+
+
+def _file_part(path):
+    from google.genai import types
+    mime = IMAGE_TYPES.get(Path(path).suffix.lower(), "application/pdf")
+    return types.Part.from_bytes(data=Path(path).read_bytes(), mime_type=mime)
+
+
 def _gemini(path, text, progress=print):
+    if text:
+        contents = [PROMPT + _today_note(), "Invoice text (extracted from the PDF's text layer):\n\n" + text]
+    else:
+        contents = [PROMPT + _today_note(), _file_part(path)]
+    return _ask(contents, Invoice, progress)
+
+
+class DateReading(BaseModel):
+    date_as_written: str | None = Field(None, description="The bill's date exactly as written, e.g. 29/10/26")
+    year_is_clear: bool = Field(description="False if any digit of the year could be read two ways")
+
+
+def reread_date(path, progress=print):
+    """A second, separate look at just the date, for a hand-written bill whose date came out
+    impossible (in the future, or over a year old). Returns (date as written, clear?) or None.
+    The answer is saved with the file's reading, so checking again gives the same result."""
+    if os.environ.get("EXTRACTOR", "gemini").lower() == "mock" or has_text_layer(path)[0]:
+        return None
+    cache = reading_file(path).with_suffix(".date.json")
+    if cache.exists():
+        c = json.loads(cache.read_text(encoding="utf-8"))
+        return c["date_as_written"], c["year_is_clear"]
+    ask = ("Look only at the date written on this bill (it is often hand-written). Write it exactly as written. "
+           "Look at each digit of the year on its own: a hand-written 4 and 6, 1 and 7, or 3 and 8 are easy to confuse. "
+           "Say whether every digit of the year is clear.")
+    try:
+        got, _ = _ask([ask, _file_part(path)], DateReading, progress)
+    except Exception:
+        return None
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(got), encoding="utf-8")
+    return got["date_as_written"], got["year_is_clear"]
+
+
+def _ask(contents, schema, progress=print):
     from google import genai
     from google.genai import types
     # fail fast: we handle retries ourselves so the user sees what's happening
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"],
                           http_options=types.HttpOptions(timeout=90_000,
                                                          retry_options=types.HttpRetryOptions(attempts=1)))
-    if text:
-        contents = [PROMPT, "Invoice text (extracted from the PDF's text layer):\n\n" + text]
-    else:
-        mime = IMAGE_TYPES.get(Path(path).suffix.lower(), "application/pdf")
-        contents = [PROMPT, types.Part.from_bytes(data=Path(path).read_bytes(), mime_type=mime)]
     config = types.GenerateContentConfig(response_mime_type="application/json",
-                                         response_schema=Invoice, temperature=0)
+                                         response_schema=schema, temperature=0)
     # first choice from env, then fallbacks if a model is busy or retired
     models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.6-flash",
                           "gemini-3-flash-preview", "gemini-3.1-flash-lite"] if m]
@@ -159,7 +203,7 @@ def _gemini(path, text, progress=print):
             progress(f"reading with {model}" + (f" (attempt {attempt})" if attempt > 1 else "") + "…")
             try:
                 resp = client.models.generate_content(model=model, contents=contents, config=config)
-                inv = resp.parsed if resp.parsed is not None else Invoice.model_validate_json(resp.text)
+                inv = resp.parsed if resp.parsed is not None else schema.model_validate_json(resp.text)
                 return inv.model_dump(), model
             except Exception as e:
                 last, msg = e, str(e)
@@ -208,6 +252,23 @@ def tidy(f):
     for li in f.get("line_items") or []:
         if li.get("hsn_sac") is not None:
             li["hsn_sac"] = str(li["hsn_sac"]).split(".")[0].strip()
+    # bill books often have GST written as one more line ("GST 18% ... 621"): that's tax, not an item
+    items, moved = [], False
+    for li in f.get("line_items") or []:
+        desc = (li.get("description") or "").strip().lower()
+        m = re.match(r"(c|s|i)?gst\b|tax\b", desc)
+        if m and not li.get("qty") and li.get("taxable_value"):
+            kind = {"c": "cgst", "s": "sgst", "i": "igst"}.get(m.group(1) or "")
+            if kind:
+                f[kind] = (f.get(kind) or 0) + li["taxable_value"]
+            else:   # plain "GST": half central, half state
+                f["cgst"] = (f.get("cgst") or 0) + li["taxable_value"] / 2
+                f["sgst"] = (f.get("sgst") or 0) + li["taxable_value"] / 2
+            moved = True
+        else:
+            items.append(li)
+    if moved:
+        f["line_items"] = items
     return f
 
 

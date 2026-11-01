@@ -716,7 +716,7 @@ function handle(kind, d) {
     if (i >= 0 && i + 1 < STEPS.length) stepEl(root, STEPS[i + 1][0]).dataset.s = "running";
     return;
   }
-  if (kind === "result") { markUnchecked(root); lastResult = d; if (current) current.d = d; renderResult($("#result"), d, false); renderRead($("#read"), d); stamp($("#sheet"), d.decision, true); running = false; arrows(); renderTour(); return; }
+  if (kind === "result") { d.stages.forEach(st => { const li = stepEl(root, st.key); if (li) fillStep(li, st); }); markUnchecked(root); lastResult = d; if (current) current.d = d; renderResult($("#result"), d, false); renderRead($("#read"), d); stamp($("#sheet"), d.decision, true); running = false; arrows(); renderTour(); return; }
   if (kind === "error") {
     root.querySelectorAll('.step[data-s="running"]').forEach(li => li.dataset.s = "waiting");
     running = false; arrows(); renderTour();
@@ -784,8 +784,8 @@ const RULEBOOK = [
     { id: "pen", title: "A printed invoice was changed by hand", outcome: "Held", codes: { HANDWRITTEN_CHANGES: "Changed by hand" },
       why: () => "A GST invoice can't be corrected with a pen. Lines or totals written in later can't be trusted or claimed.",
       next: () => "Ask for a revised invoice, or a debit note for anything extra." },
-    { id: "date", title: "The date is odd", outcome: "Held", codes: { FUTURE_DATE: "Dated in the future", STALE_INVOICE: "Over a year old", INVOICE_BEFORE_PO: "Dated before the order" },
-      why: () => "A bill dated in the future, more than a year ago, or before the order it's for may have been backdated or reused.",
+    { id: "date", title: "The date is odd", outcome: "Held", codes: { FUTURE_DATE: "Dated in the future", STALE_INVOICE: "Over a year old", INVOICE_BEFORE_PO: "Dated before the order", DATE_UNCLEAR: "Date unclear", DATE_REREAD: "Date read twice" },
+      why: () => "A bill dated in the future, more than a year ago, or before the order it's for may have been backdated or reused. A hand-written year is easy to misread (a 6 taken for a 4), so on a hand-written bill an odd date is read a second time before anything is decided; if the two readings disagree, a person checks.",
       next: () => "Check the date with the supplier, and why it's arriving now." },
     { id: "not-us", title: "It's made out to another company", outcome: "Rejected", codes: { WRONG_BUYER: "Not billed to us" },
       why: () => "We can only pay, and claim GST on, bills made out to us.",
@@ -856,7 +856,7 @@ const RULEBOOK = [
       why: () => "With no GSTIN, a shop is known by its phone number. One wrong or swapped digit is a writing slip, so it's only a small sign. A completely different number is serious: a fake bill usually copies a shop's name, not its number. It might also be the shop's second number.",
       next: () => "Call the shop on the number we have. If the other number is theirs too, add it to their file." },
     { id: "bill-books", title: "Bill-book numbers", outcome: "Small sign, or held", codes: { NEW_BILL_BOOK: "Second bill book", MANY_BILL_BOOKS: "Many bill books", SERIAL_BACKWARDS: "Bill number goes back" },
-      why: () => "A bill book's pages are used in order, and most shops start a new book in April. Many shops use two books at once, so a bill from another book is only a small sign, and three or more books in a year is another. But a lower number than an earlier bill from the same book, in the same year, can't happen honestly: that's held.",
+      why: () => "Within a year, a later bill should have a higher number (most shops start again in April). A bill whose number is out of step with the shop's other bills is checked: if it's from the same pad of 100 pages, that can't happen honestly, so it's held. If it's from a different pad, it's probably a second bill book (many shops keep one for cash and one for credit), so it's only a small sign. Three books in use at once is another small sign.",
       next: () => "Call the shop on the number we have and ask whether they wrote this bill." },
     { id: "unusual", title: "Much bigger than usual", outcome: "Small sign", codes: { UNUSUAL_AMOUNT: "Bigger than usual" },
       why: () => "A bill three times bigger than a shop's usual ones is worth a second look.",
