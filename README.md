@@ -108,7 +108,7 @@ There's no public dataset that links real invoices to purchase orders and a vend
 
 Order matters for two of them: 05 is only a duplicate once 01 is saved, and 04 only goes over the order once 03 is saved. `check_invoices.py --all` and the guided tour both run them in the right order.
 
-**Want to try more?** `test_bills/` has 20 more invoices it has never seen, one problem each: an unknown vendor, an invalid GSTIN, a bill made out to another company, a wrong total, GST at the wrong rate, a future date, a made-up order number, a quotation pretending to be an invoice, and more. Its README lists what each one should get.
+**Want to try more?** `test_bills/` has 22 more invoices it has never seen, one problem each: an unknown vendor, an invalid GSTIN, a bill made out to another company, a wrong total, GST at the wrong rate, a future date, a made-up order number, a quotation pretending to be an invoice, and more. Its README lists what each one should get.
 
 ## Assumptions
 
@@ -140,7 +140,7 @@ data/
   correct_answers.json the right reading and decision for each test invoice
   saved_readings/      Gemini's readings, so a file is only read once
 invoices/              the 13 test invoices
-test_bills/            20 more invoices to upload yourself, one problem each
+test_bills/            22 more invoices to upload yourself, one problem each
 scripts/               makes the test data, checks it, and pre-draws invoice previews
 check_invoices.py      runs invoices from the command line
 start_app.py           starts the web app

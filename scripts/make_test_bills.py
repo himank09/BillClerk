@@ -145,15 +145,15 @@ BILLS = [
 ]
 
 ORDER_DEPENDENT = [
-    dict(id="T17", file="T17_number_reused_after_01.pdf", layout="classic", vendor_id="V001",
+    dict(id="T17b", file="T17b_number_reused.pdf", layout="classic", vendor_id="V001",
          inv_no="AOS/26-27/0042", inv_date="16-Oct-2026", po_ref="PO-2026-1010",
          lines=L("Wireless keyboard and mouse combo", "8471", 4, "Nos", 1450, 18),
          expected="HOLD", problem="Reuses invoice number 0042 for a different bill",
-         why="Apex already billed AOS/26-27/0042 (example 01). GST rules need a new number per invoice in a year. Save example 01 to records first."),
-    dict(id="T18", file="T18_resent_with_new_number_after_02.pdf", layout="modern", vendor_id="V002",
+         why="Apex already billed AOS/26-27/0042 (T17a). GST rules need a new number for every invoice in a year."),
+    dict(id="T18b", file="T18b_resent_with_new_number.pdf", layout="modern", vendor_id="V002",
          inv_no="BW/1026/125", inv_date="31 Oct 2026", po_ref="PO-2026-1002", po_lines_from="PO-2026-1002",
          expected="HOLD", problem="October's IT bill sent again under a new number",
-         why="Same order and amount as example 02, just renumbered, which is how double payments slip through. Save example 02 to records first."),
+         why="Same order and amount as T18a, just renumbered, which is how double payments slip through."),
 ]
 
 
@@ -201,7 +201,16 @@ def quotation():
 
 
 def main():
-    answers = []
+    # T17a / T18a are the originals (copies of examples 01 and 02): save them, then try T17b / T18b
+    for tid, src, saved in (("T17a", "01_apex_happy_intrastate.pdf", "AOS/26-27/0042"),
+                            ("T18a", "02_bluewave_happy_interstate.pdf", "BW/1026/118")):
+        (OUT / f"{tid}_save_this_first.pdf").write_bytes((ROOT / "invoices" / src).read_bytes())
+    answers = [dict(id="T17a", file="T17a_save_this_first.pdf", problem="Nothing: the original, to save first", expected="APPROVE",
+                    why="A correct Apex invoice (same as example 01). Press Save to records, then try T17b.", needs_first=None,
+                    printed="example 01"),
+               dict(id="T18a", file="T18a_save_this_first.pdf", problem="Nothing: the original, to save first", expected="APPROVE",
+                    why="A correct Bluewave invoice (same as example 02). Press Save to records, then try T18b.", needs_first=None,
+                    printed="example 02")]
     for s in BILLS + ORDER_DEPENDENT:
         pdf, (rows, sub, split, total), v = render(s)
         path = OUT / s["file"]
@@ -211,7 +220,7 @@ def main():
             path.write_bytes(pdf)
         answers.append(dict(
             id=s["id"], file=s["file"], problem=s["problem"], expected=s["expected"], why=s["why"],
-            needs_first=("01" if s["id"] == "T17" else "02" if s["id"] == "T18" else None),
+            needs_first=("T17a" if s["id"] == "T17b" else "T18a" if s["id"] == "T18b" else None),
             printed=dict(vendor_name=v["name"], vendor_gstin=s.get("gstin_override", v["gstin"]),
                          buyer_gstin=(s.get("buyer") or mi.BUYER)["gstin"], invoice_number=s["inv_no"],
                          invoice_date=s["inv_date"], po_reference=s.get("po_ref"),

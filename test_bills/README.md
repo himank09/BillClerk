@@ -1,8 +1,10 @@
 # Test bills: try BillClerk yourself
 
-Twenty invoices BillClerk has never seen, one problem each. Upload them on the Check page like any real invoice. They aren't among the saved examples, so Gemini reads each one live (5 to 40 seconds).
+Invoices BillClerk has never seen, one problem each. Upload them on the Check page like any real invoice. They aren't among the saved examples, so Gemini reads each one live (5 to 40 seconds).
 
-**Before you start:** go to History and press *Clear history*, so earlier checks don't change the results. T17 and T18 build on the examples: save example 01 (for T17) or 02 (for T18) to records first, from the guided tour or the examples list.
+**Before you start:** go to History and press *Clear history*, so earlier checks don't change the results.
+
+**T17 and T18 come in pairs.** Upload the *a* file and press **Save to records**, then upload the *b* file. The *b* file is only a problem compared with the saved original.
 
 | # | What's wrong | Should be | Why |
 |---|---|---|---|
@@ -22,11 +24,13 @@ Twenty invoices BillClerk has never seen, one problem each. Upload them on the C
 | T14 | No order number, and it fits neither open order | **Hold** | Coromandel has two open orders (housekeeping, pest control); this matches neither, so a person must pick. |
 | T15 | Wrong GST type and a new bank account | **Hold** | A Mumbai vendor billing Tamil Nadu must charge IGST, not CGST + SGST, and the bank account has changed. |
 | T16 | A crooked, grainy scan of a correct bill | **Pay** | Nothing is wrong with it; it's here to check a poor scan is still read correctly. |
-| T17 | Reuses invoice number 0042 for a different bill | **Hold** | Apex already billed AOS/26-27/0042 (example 01). GST rules need a new number per invoice in a year. Save example 01 to records first. |
-| T18 | October's IT bill sent again under a new number | **Hold** | Same order and amount as example 02, just renumbered, which is how double payments slip through. Save example 02 to records first. |
+| T17a | Nothing: the original, to save first | **Pay** | A correct Apex invoice (same as example 01). Press Save to records, then try T17b. |
+| T17b | Reuses invoice number 0042 for a different bill | **Hold** | Apex already billed AOS/26-27/0042 (T17a). GST rules need a new number for every invoice in a year. |
+| T18a | Nothing: the original, to save first | **Pay** | A correct Bluewave invoice (same as example 02). Press Save to records, then try T18b. |
+| T18b | October's IT bill sent again under a new number | **Hold** | Same order and amount as T18a, just renumbered, which is how double payments slip through. |
 | T19 | A quotation, not an invoice | **Reject** | Nothing is owed on a quotation; it should be removed from the invoice queue. |
 | T20 | A text file renamed to .pdf | **Reject** | It can't be opened as a PDF, so the sender is asked for a fresh copy. |
 
-T07 is dated 15 January 2027, so it only counts as "in the future" until then.
+T07 is dated 15 January 2027, so it only counts as "in the future" until then. T08 is caught twice: it's over a year old, and it's dated before the order it quotes.
 
 `answers.json` has exactly what each bill says, for comparing with what BillClerk read. To rebuild them: `python scripts/make_test_bills.py`.

@@ -216,7 +216,8 @@ class Run:
         if f.get("vendor_gstin") and not g["valid"]:
             self.flag("validate", "HOLD", "INVALID_GSTIN",
                       f"Vendor GSTIN {g['gstin']} is not valid ({g['reason']}). Either it was misread or the number is wrong.",
-                      audience="internal", action="Check the GSTIN on the PDF and on the GST portal.")
+                      audience="internal", action="Check the GSTIN on the PDF and on the GST portal.",
+                      short=f"The vendor's GSTIN {g['gstin']} isn't valid (its check digit is wrong).")
 
         bg = gstin_check(f.get("buyer_gstin"))
         ours = (f.get("buyer_gstin") or "").upper() == self.buyer["gstin"]
@@ -225,8 +226,9 @@ class Run:
         if f.get("buyer_gstin") and not ours:
             if bg["valid"]:
                 self.flag("validate", "REJECT", "WRONG_BUYER",
-                          f"The invoice is addressed to GSTIN {bg['gstin']}, not ours ({self.buyer['gstin']}).",
-                          audience="vendor", action="Return to vendor; it was billed to the wrong entity.")
+                          f"The invoice is addressed to {f.get('buyer_name') or 'GSTIN ' + bg['gstin']} ({bg['gstin']}), not to us ({self.buyer['gstin']}).",
+                          audience="vendor", action="Return to vendor; it was billed to the wrong entity.",
+                          short=f"Addressed to {f.get('buyer_name') or 'GSTIN ' + bg['gstin']}, not {self.buyer['name']}.")
             else:
                 self.flag("validate", "HOLD", "BUYER_GSTIN_UNREADABLE",
                           "Buyer GSTIN on the invoice could not be read correctly.", audience="internal",
@@ -250,7 +252,9 @@ class Run:
             self.flag("validate", "HOLD", "ARITHMETIC",
                       "The invoice's own numbers don't add up "
                       f"(taxable {inr(taxable)} + GST {inr(tax)} vs total {inr(total)}).",
-                      audience="vendor", action="Ask the vendor for a corrected invoice.")
+                      audience="vendor", action="Ask the vendor for a corrected invoice.",
+                      short=(f"{inr(taxable)} + {inr(tax)} GST = {inr(taxable + tax)}, but the invoice asks for {inr(total)}."
+                             if ok_lines else "The line items don't add up to the amounts printed."))
 
         d = parse_date(f.get("invoice_date"))
         age = (date.today() - d).days if d else None
@@ -262,10 +266,12 @@ class Run:
                       audience="internal", action="AP clerk to enter the invoice date.")
         elif age < 0:
             self.flag("validate", "HOLD", "FUTURE_DATE", f"Invoice is dated in the future ({d}).",
-                      audience="vendor", action="Ask the vendor to confirm the invoice date.")
+                      audience="vendor", action="Ask the vendor to confirm the invoice date.",
+                      short=f"Dated {d.strftime('%d %b %Y').lstrip('0')}, which is in the future.")
         elif age > pol["max_invoice_age_days"]:
             self.flag("validate", "HOLD", "STALE_INVOICE", f"Invoice is {age} days old.",
-                      audience="internal", action="Check why this invoice is arriving so late.")
+                      audience="internal", action="Check why this invoice is arriving so late.",
+                      short=f"Dated {d.strftime('%d %b %Y').lstrip('0')}, more than a year ago.")
         self.ctx.update(date=d, taxable=taxable, tax=tax, total=total)
         return ("Complete, and the numbers add up",
                 checks, {})
@@ -288,7 +294,8 @@ class Run:
         if not v:
             self.flag("vendor", "REJECT", "UNKNOWN_VENDOR",
                       f"{f.get('vendor_name') or 'This vendor'} ({gst}) is not an approved vendor.",
-                      audience="internal", action="Send to procurement; vendor must be onboarded before any payment.")
+                      audience="internal", action="Send to procurement; vendor must be onboarded before any payment.",
+                      short=f"{f.get('vendor_name') or 'This vendor'} isn't one of our approved vendors.")
             self.ctx["vendor"] = None
             return "Vendor not recognised", checks, {}
         self.ctx["vendor"] = v
@@ -348,7 +355,8 @@ class Run:
             checks.append(dict(label="CGST equals SGST", ok=ok_split, detail=f"{inr(cg)} / {inr(sg)}"))
             if not ok_split:
                 self.flag("gst", "HOLD", "CGST_SGST_UNEQUAL", "CGST and SGST should be equal halves.",
-                          audience="vendor", action="Ask the vendor for a corrected invoice.")
+                          audience="vendor", action="Ask the vendor for a corrected invoice.",
+                          short=f"CGST {inr(cg)} and SGST {inr(sg)} should be equal halves of {inr(cg + sg)}.")
         # rate check: GST should be rate × taxable value, rounded to the rupee
         exp_tax = round(sum((to_amount(li.get("taxable_value")) or 0) * (li.get("gst_rate") or 18) / 100
                             for li in f.get("line_items") or []))
@@ -358,7 +366,8 @@ class Run:
         if not ok_amt:
             self.flag("gst", "HOLD", "TAX_AMOUNT",
                       f"GST charged ({inr(self.ctx['tax'])}) does not match the rates on the invoice ({inr(exp_tax)}).",
-                      audience="vendor", action="Ask the vendor to correct the tax amount.")
+                      audience="vendor", action="Ask the vendor to correct the tax amount.",
+                      short=f"GST should be {inr(exp_tax)} at the rates shown, but {inr(self.ctx['tax'])} is charged.")
         return (f"{expected}, correct for {'a same-state' if intra else 'an out-of-state'} supply", checks, dict(expected=expected, charged=charged))
 
     def s_po(self):
@@ -371,19 +380,32 @@ class Run:
             checks.append(dict(label="PO number on invoice exists", ok=po is not None, detail=ref))
             if not po:
                 self.flag("po", "HOLD", "PO_NOT_FOUND", f"PO {ref} quoted on the invoice does not exist in our system.",
-                          audience="vendor", action="Ask the vendor to confirm the correct PO number.")
+                          audience="vendor", action="Ask the vendor to confirm the correct PO number.",
+                          short=f"{ref} isn't one of our purchase orders.")
                 self.ctx["po"] = None
                 return f"{ref} not found", checks, {}
             mine = po["vendor_id"] == v["vendor_id"]
             checks.append(dict(label="PO belongs to this vendor", ok=mine, detail=f"{ref} is with {po['vendor_id']}"))
             if not mine:
-                self.flag("po", "REJECT", "PO_OTHER_VENDOR", f"{ref} was raised on a different vendor ({po['vendor_id']}).",
-                          audience="vendor", action="Return to vendor; the PO quoted is not theirs.")
+                owner = next((x["name"] for x in self.vendors if x["vendor_id"] == po["vendor_id"]), po["vendor_id"])
+                self.flag("po", "REJECT", "PO_OTHER_VENDOR", f"{ref} was raised on a different vendor ({owner}).",
+                          audience="vendor", action="Return to vendor; the PO quoted is not theirs.",
+                          short=f"{ref} was raised on {owner}, not {v['name']}.")
             is_open = po["status"] == "open"
             checks.append(dict(label="PO is open", ok=is_open, detail=po["status"]))
             if not is_open:
                 self.flag("po", "REJECT", "PO_CLOSED", f"{ref} is {po['status']}; nothing more can be billed against it.",
                           audience="vendor", action="Do not pay against this PO.")
+            # an invoice can't come before the order it bills against: a sign of backdating or recycling
+            po_date = date.fromisoformat(po["po_date"])
+            d = self.ctx.get("date")
+            if mine and d and d < po_date:
+                checks.append(dict(label="Invoice dated after the PO", ok=False, detail=f"invoice {d}, PO raised {po_date}"))
+                self.flag("po", "HOLD", "INVOICE_BEFORE_PO",
+                          f"The invoice is dated {d.strftime('%d %b %Y').lstrip('0')}, before {ref} was raised on "
+                          f"{po_date.strftime('%d %b %Y').lstrip('0')}. An invoice can't come before its order.",
+                          audience="internal", action="Check with the vendor; the invoice may be backdated or reused.",
+                          short=f"Dated before its own order ({ref} was raised on {po_date.strftime('%d %b %Y').lstrip('0')}).")
             self.ctx.update(po=po, po_inferred=False)
             return f"{ref}, {po['description']}", checks, dict(po_number=ref, inferred=False)
 
@@ -459,7 +481,8 @@ class Run:
             self.flag("duplicate", "HOLD", "NUMBER_REUSED",
                       f"Invoice number {serial} was already used by this vendor in FY {fy} for a different amount "
                       f"({inr(h['total'])}). GST rules require a unique number per financial year.",
-                      audience="vendor", action="Ask the vendor whether this replaces the earlier invoice.")
+                      audience="vendor", action="Ask the vendor whether this replaces the earlier invoice.",
+                      short=f"Invoice number {h['invoice_number']} was already used for {inr(h['total'])}; this one is {inr(self.ctx['total'])}.")
             return "Invoice number reused", checks, {}
         po = self.ctx.get("po")
         near = [h for h in past if po and h["po_number"] == po["po_number"] and h["decision"] != "REJECT"
@@ -472,7 +495,8 @@ class Run:
             self.flag("duplicate", "HOLD", "POSSIBLE_DUPLICATE",
                       f"Different invoice number, but same PO and same amount as '{near[0]['invoice_number']}' "
                       f"from {near[0]['invoice_date']}. Could be a resend under a new number.",
-                      audience="internal", action="AP clerk to confirm these are two separate supplies.")
+                      audience="internal", action="AP clerk to confirm these are two separate supplies.",
+                      short=f"Same order and amount as {near[0]['invoice_number']}, under a new number: possibly sent twice.")
         return "Not in records yet" if not near else "Possible duplicate", checks, {}
 
     def s_match(self):
@@ -486,14 +510,17 @@ class Run:
         tol_pct, tol_abs = self.policy["tolerance"]["percent"], self.policy["tolerance"]["absolute_inr"]
         billed = records.billed_on_po(self.con, po["po_number"])
         checks, to_bill, problems = [], [], []
-        for li in f.get("line_items") or []:
+        rate_issues, qty_issues, line_issues = [], [], {}   # line_issues: invoice line number -> what's wrong
+        for i, li in enumerate(f.get("line_items") or []):
             best = max(po["lines"], key=lambda pl: similar(li["description"], pl["description"])
                        + (20 if str(li.get("hsn_sac")) == pl["hsn_sac"] else 0))
             sim = similar(li["description"], best["description"])
             if sim < 70 and str(li.get("hsn_sac")) != best["hsn_sac"]:
                 checks.append(dict(label=f"'{li['description'][:40]}' is on the PO", ok=False, detail="no matching PO line"))
                 self.flag("match", "HOLD", "LINE_NOT_ON_PO", f"'{li['description']}' is not on {po['po_number']}.",
-                          audience="vendor", action="Ask the vendor which order this item belongs to.")
+                          audience="vendor", action="Ask the vendor which order this item belongs to.",
+                          short=f"'{li['description']}' ({inr(to_amount(li.get('taxable_value')) or 0)}) isn't on {po['po_number']}.")
+                line_issues[i] = "not on the order"
                 continue
             qty, price = li.get("qty") or 0, li.get("unit_price") or 0
             value = to_amount(li.get("taxable_value")) or 0
@@ -515,8 +542,12 @@ class Run:
                                detail=f"{lump}rate {inr(price)} vs PO {inr(best['unit_price'])}; qty {prev_q:g} already billed + {qty:g} now = {prev_q + qty:g} of {best['qty']:g} {best['unit']}"))
             if not price_ok:
                 problems.append(f"rate for '{best['description']}' is {inr(price)} vs {inr(best['unit_price'])} on the PO")
+                rate_issues.append((best, price))
+                line_issues[i] = f"order rate {inr(best['unit_price'])}"
             if not qty_ok:
                 problems.append(f"quantity billed would reach {prev_q + qty:g} {best['unit']} against {best['qty']:g} ordered")
+                qty_issues.append((best, qty, prev_q))
+                line_issues[i] = (line_issues.get(i, "") + "; " if i in line_issues else "") + f"order is for {best['qty']:g}"
             to_bill.append(dict(po_number=po["po_number"], line_no=best["line_no"], qty=qty,
                                 value=value or qty * price))
         prev_val = sum(b["value"] for b in billed.values())
@@ -538,16 +569,30 @@ class Run:
                       f"within the {inr(allowed)} tolerance, so not worth stopping the payment.",
                       short=f"{inr(over)} over the PO, within tolerance")
         if problems:
+            # lead with the cause a clerk can act on: a wrong rate, too many units, or simply the running total
+            if rate_issues and not qty_issues:
+                pl, price = rate_issues[0]
+                short = (f"Charged {inr(price)} per unit for '{pl['description']}'; the order says {inr(pl['unit_price'])} "
+                         f"({(price / pl['unit_price'] - 1) * 100:+.1f}%).")
+            elif qty_issues and not rate_issues:
+                pl, qty, prev_q = qty_issues[0]
+                short = (f"{qty:g} {pl['unit']} of '{pl['description']}' billed" + (f" (plus {prev_q:g} already)" if prev_q else "")
+                         + f"; the order is for {pl['qty']:g}.")
+            elif not ok_val:
+                short = f"Over-billed: {inr(new_val)} billed against a {inr(po['subtotal'])} PO ({over / po['subtotal'] * 100:+.1f}%)."
+            else:
+                short = "Invoice doesn't match the PO."
+            only_total = not (rate_issues or qty_issues)
             self.flag("match", "HOLD", "OVER_PO" if not ok_val else "PO_MISMATCH",
                       "Doesn't match the PO: " + "; ".join(problems) + ".",
                       audience="vendor", action="Ask the vendor to correct the invoice, or get a PO amendment from the buyer.",
-                      short=(f"Over-billed: {inr(new_val)} billed against a {inr(po['subtotal'])} PO ({over / po['subtotal'] * 100:+.1f}%)."
-                             if not ok_val else "Invoice doesn't match the PO."),
+                      short=short,
                       vendor_msg=(f"Our order {po['po_number']} is for {inr(po['subtotal'])} before GST. {inr(prev_val)} has already been "
                                   f"invoiced against it, so {inr(max(po['subtotal'] - prev_val, 0))} remains, but this invoice is for "
                                   f"{inr(self.ctx['taxable'])}. Please revise it to the remaining amount, or let us know if more was "
-                                  "supplied so we can amend the order." if not ok_val else
+                                  "supplied so we can amend the order." if only_total and not ok_val else
                                   "This invoice doesn't match our purchase order: " + "; ".join(problems) + "."))
+        self.ctx["line_issues"] = line_issues
         self.ctx["to_bill"] = to_bill
         return ("Prices and quantities match the order" if not problems else f"Doesn't match {po['po_number']}", checks,
                 dict(already_billed=prev_val, after_this=new_val, po_value=po["subtotal"]))
@@ -612,7 +657,8 @@ class Run:
                                 po_inferred=self.ctx.get("po_inferred", False),
                                 taxable=self.ctx.get("taxable"), tax=self.ctx.get("tax"), total=self.ctx.get("total")),
                    emails=draft_emails(self, decision), stages=self.stages, flags=self.flags,
-                   seen_before=self.ctx.get("seen_before") or [], sha256=self.ctx.get("sha"))
+                   seen_before=self.ctx.get("seen_before") or [], sha256=self.ctx.get("sha"),
+                   line_issues=self.ctx.get("line_issues") or {})
         return res
 
     def commit(self, res):

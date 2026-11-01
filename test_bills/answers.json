@@ -1,5 +1,23 @@
 [
   {
+    "id": "T17a",
+    "file": "T17a_save_this_first.pdf",
+    "problem": "Nothing: the original, to save first",
+    "expected": "APPROVE",
+    "why": "A correct Apex invoice (same as example 01). Press Save to records, then try T17b.",
+    "needs_first": null,
+    "printed": "example 01"
+  },
+  {
+    "id": "T18a",
+    "file": "T18a_save_this_first.pdf",
+    "problem": "Nothing: the original, to save first",
+    "expected": "APPROVE",
+    "why": "A correct Bluewave invoice (same as example 02). Press Save to records, then try T18b.",
+    "needs_first": null,
+    "printed": "example 02"
+  },
+  {
     "id": "T01",
     "file": "T01_unknown_vendor.pdf",
     "problem": "A supplier we've never onboarded",
@@ -656,12 +674,12 @@
     }
   },
   {
-    "id": "T17",
-    "file": "T17_number_reused_after_01.pdf",
+    "id": "T17b",
+    "file": "T17b_number_reused.pdf",
     "problem": "Reuses invoice number 0042 for a different bill",
     "expected": "HOLD",
-    "why": "Apex already billed AOS/26-27/0042 (example 01). GST rules need a new number per invoice in a year. Save example 01 to records first.",
-    "needs_first": "01",
+    "why": "Apex already billed AOS/26-27/0042 (T17a). GST rules need a new number for every invoice in a year.",
+    "needs_first": "T17a",
     "printed": {
       "vendor_name": "Apex Office Supplies Pvt Ltd",
       "vendor_gstin": "33AAJCA3417L1ZQ",
@@ -695,12 +713,12 @@
     }
   },
   {
-    "id": "T18",
-    "file": "T18_resent_with_new_number_after_02.pdf",
+    "id": "T18b",
+    "file": "T18b_resent_with_new_number.pdf",
     "problem": "October's IT bill sent again under a new number",
     "expected": "HOLD",
-    "why": "Same order and amount as example 02, just renumbered, which is how double payments slip through. Save example 02 to records first.",
-    "needs_first": "02",
+    "why": "Same order and amount as T18a, just renumbered, which is how double payments slip through.",
+    "needs_first": "T18a",
     "printed": {
       "vendor_name": "Bluewave IT Services LLP",
       "vendor_gstin": "29AAQFB7720M1ZT",

@@ -141,6 +141,9 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
 .read-lines td { padding: 0.4rem 0; border-top: 1px solid var(--line-faint); vertical-align: top; }
 .read-lines td.q { color: var(--ink-soft); white-space: nowrap; padding: 0.4rem 0.8rem; text-align: right; }
 .read-lines td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.read-lines tr.off td { background: var(--hold-bg); }
+.read-lines tr.off td:first-child { box-shadow: inset 3px 0 0 var(--hold); padding-left: 0.5rem; }
+.read-lines .flag { display: inline-block; margin-left: 0.45rem; font-size: 0.75rem; font-weight: 700; color: var(--hold); white-space: nowrap; }
 .read-sum { display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 1rem; margin-top: 0.4rem; padding-top: 0.6rem; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .read-sum span { color: var(--ink-soft); } .read-sum b { text-align: right; font-weight: 500; }
 .read-sum .total { font-size: 1.25rem; font-weight: 800; color: var(--ink); }
@@ -697,7 +700,7 @@ function renderRead(el, d) {
   const f = d.stages.find(s => s.key === "extract")?.data?.fields;
   if (!f || !d.invoice?.total) { el.innerHTML = ""; return; }
   const inv = d.invoice, name = d.vendor?.name || f.vendor_name || "Unknown vendor";
-  const lines = f.line_items || [];
+  const lines = f.line_items || [], issues = d.line_issues || {};
   const gst = f.igst ? [["IGST", f.igst]] : [["CGST", f.cgst], ["SGST", f.sgst]].filter(x => x[1]);
   const date = inv.date && inv.date !== "None" ? new Date(inv.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : (f.invoice_date || "–");
   el.innerHTML = `<section class="read" aria-label="What was read from the invoice">
@@ -706,9 +709,9 @@ function renderRead(el, d) {
       <div><dt>Invoice</dt><dd>${esc(inv.number || "–")}</dd></div>
       <div><dt>Date</dt><dd>${esc(date)}</dd></div>
       <div><dt>Order</dt><dd>${inv.po ? esc(inv.po) + (inv.po_inferred ? `<span class="pill">worked out</span>` : "")
-        : f.po_reference ? esc(f.po_reference) + `<span class="pill">not checked</span>` : "Not printed"}</dd></div>
+        : f.po_reference ? esc(f.po_reference) + `<span class="pill">${d.flags.some(x => x.code === "PO_NOT_FOUND") ? "not found" : "not checked"}</span>` : "Not printed"}</dd></div>
     </dl>
-    ${lines.length ? `<table class="read-lines"><tbody>${lines.slice(0, 5).map(li => `<tr><td>${esc(li.description)}</td>
+    ${lines.length ? `<table class="read-lines"><tbody>${lines.slice(0, 5).map((li, i) => `<tr${issues[i] ? ` class="off"` : ""}><td>${esc(li.description)}${issues[i] ? `<span class="flag">${esc(issues[i])}</span>` : ""}</td>
       <td class="q">${li.qty && li.unit_price ? `${li.qty} × ${inr(li.unit_price)}` : ""}</td><td class="r">${inr(li.taxable_value)}</td></tr>`).join("")}
       ${lines.length > 5 ? `<tr><td class="muted" colspan="3">and ${lines.length - 5} more</td></tr>` : ""}</tbody></table>` : ""}
     <div class="read-sum"><span>Before GST</span><b>${inr(inv.taxable)}</b>
@@ -988,6 +991,7 @@ async function loadRules() {
     <dt>It's over ${inr(p.approval_limit_inr)}</dt><dd>A finance manager signs off anything above this, however correct.</dd>
     <dt>The bank account has changed</dt><dd>The most common invoice fraud. Call the vendor on the number already on file first.</dd>
     <dt>The GST type is wrong</dt><dd>Same state as us means CGST + SGST, another state means IGST. Otherwise the tax credit is lost.</dd>
+    <dt>It's dated oddly</dt><dd>In the future, more than a year old, or before the order it bills against (a sign it was backdated or reused).</dd>
     <dt>It's been changed by hand</dt><dd>A GST invoice can't be corrected with a pen; it needs a revised invoice or a debit note.</dd>
     <dt>It can't be read, or the order can't be found</dt><dd>Missing details, or no open order matches clearly enough.</dd>
   </dl></section>
