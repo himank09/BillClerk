@@ -15,7 +15,7 @@ import uuid
 from datetime import date, datetime
 from pathlib import Path
 
-from rapidfuzz import fuzz
+from rapidfuzz import fuzz, utils
 
 from . import records
 from .read_invoice import extract, has_text_layer
@@ -50,6 +50,12 @@ SHORTS = {
     "LINE_NOT_ON_PO": "Has an item that isn't on the order.",
 }
 STATUS = {0: "pass", 1: "warn", 2: "hold", 3: "reject"}
+
+
+def similar(a, b):
+    """0-100 likeness of two names or descriptions, ignoring case and punctuation
+    (invoices often print names in capitals: APEX OFFICE SUPPLIES = Apex Office Supplies)."""
+    return fuzz.token_set_ratio(a or "", b or "", processor=utils.default_process)
 
 
 class Run:
@@ -270,8 +276,8 @@ class Run:
         v = next((x for x in self.vendors if x["gstin"] == gst), None)
         how = "GSTIN"
         if not v and f.get("vendor_name"):
-            best = max(self.vendors, key=lambda x: fuzz.token_set_ratio(x["name"], f["vendor_name"]))
-            score = fuzz.token_set_ratio(best["name"], f["vendor_name"])
+            best = max(self.vendors, key=lambda x: similar(x["name"], f["vendor_name"]))
+            score = similar(best["name"], f["vendor_name"])
             if score >= 90:
                 v, how = best, f"name ({score:.0f}% match)"
                 self.flag("vendor", "HOLD", "GSTIN_NOT_ON_FILE",
@@ -389,7 +395,7 @@ class Run:
             billed = sum(b["value"] for b in records.billed_on_po(self.con, p["po_number"]).values())
             remaining = max(p["subtotal"] - billed, 1)
             amt = max(0.0, 1 - abs(self.ctx["taxable"] - remaining) / remaining)
-            ls = [max((fuzz.token_set_ratio(li["description"], pl["description"]) / 100) *
+            ls = [max((similar(li["description"], pl["description"]) / 100) *
                       (1.0 if str(li.get("hsn_sac")) == pl["hsn_sac"] else 0.85) for pl in p["lines"])
                   for li in f.get("line_items") or []]
             lines = sum(ls) / len(ls) if ls else 0
@@ -481,9 +487,9 @@ class Run:
         billed = records.billed_on_po(self.con, po["po_number"])
         checks, to_bill, problems = [], [], []
         for li in f.get("line_items") or []:
-            best = max(po["lines"], key=lambda pl: fuzz.token_set_ratio(li["description"], pl["description"])
+            best = max(po["lines"], key=lambda pl: similar(li["description"], pl["description"])
                        + (20 if str(li.get("hsn_sac")) == pl["hsn_sac"] else 0))
-            sim = fuzz.token_set_ratio(li["description"], best["description"])
+            sim = similar(li["description"], best["description"])
             if sim < 70 and str(li.get("hsn_sac")) != best["hsn_sac"]:
                 checks.append(dict(label=f"'{li['description'][:40]}' is on the PO", ok=False, detail="no matching PO line"))
                 self.flag("match", "HOLD", "LINE_NOT_ON_PO", f"'{li['description']}' is not on {po['po_number']}.",
