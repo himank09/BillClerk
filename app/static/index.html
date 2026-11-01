@@ -607,8 +607,29 @@ function check(file, title, sub) {
   const queue = [], gap = reduced ? 0 : 200; let busy = false, finished = false;
   const es = new EventSource(`/api/run/${encodeURIComponent(file)}`);
   const pump = () => { if (busy || !queue.length) return; busy = true; const [k, d] = queue.shift(); handle(k, d); setTimeout(() => { busy = false; pump(); }, k === "stage" ? gap : 0); };
-  for (const k of ["stage", "progress", "result", "error"]) es.addEventListener(k, e => { queue.push([k, JSON.parse(e.data)]); pump(); if (k === "result" || k === "error") { finished = true; es.close(); } });
-  es.onerror = () => { if (!finished) { es.close(); queue.push(["error", { message: "Lost the connection to the server. Check it's still running, then try again." }]); pump(); } };
+  // checks this file already had, so a dropped connection can find the new one
+  const known = api("/api/runs").then(rs => new Set(rs.filter(r => r.file === file).map(r => r.run_id))).catch(() => new Set());
+  for (const k of ["stage", "progress", "result", "failed"]) es.addEventListener(k, e => { queue.push([k === "failed" ? "error" : k, JSON.parse(e.data)]); pump(); if (k === "result" || k === "failed") { finished = true; es.close(); } });
+  es.onerror = () => { if (!finished) { finished = true; es.close(); recover(file, known); } };
+}
+/* The connection dropped (slow Gemini, flaky network). The server keeps going and saves
+   the result, so wait for it to appear in history and show it as if nothing happened. */
+async function recover(file, knownP) {
+  const known = await knownP;
+  $("#result").innerHTML = `<div class="checking">Still checking… the connection dropped, so BillClerk is fetching the result.</div>`;
+  for (let i = 0; i < 80; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const r = (await api("/api/runs")).find(x => x.file === file && !known.has(x.run_id));
+      if (!r) continue;
+      const d = await api(`/api/runs/${encodeURIComponent(r.run_id)}`);
+      const root = $("#steps"); root.innerHTML = stepRows();
+      d.stages.forEach(st => { const li = stepEl(root, st.key); if (li) fillStep(li, st); });
+      handle("result", d);
+      return;
+    } catch { /* server still waking or busy: try again */ }
+  }
+  handle("error", { message: "Lost the connection to the server and couldn't get the result. Try checking it again." });
 }
 function showResult(e) {
   const d = e.d; lastResult = d;

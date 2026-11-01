@@ -173,7 +173,9 @@ async def upload(request: Request, file: UploadFile = File(...)):
 
 @app.get("/api/run/{name}")
 def run_stream(name: str):
-    """Server-sent events: 'progress' while reading, one 'stage' per check, then 'result'."""
+    """Server-sent events: 'progress' while reading, one 'stage' per check, then
+    'result' (or 'failed'). The check runs on its own thread, so it finishes and is
+    saved to history even if the browser's connection drops halfway."""
     path = _find(name)
     q = queue.Queue()
 
@@ -183,7 +185,7 @@ def run_stream(name: str):
                           on_progress=lambda m: q.put(("progress", {"message": m})))
             q.put(("result", res))
         except Exception as e:  # never leave the page hanging
-            q.put(("error", {"message": f"Something went wrong running this invoice: {e}"}))
+            q.put(("failed", {"message": f"Something went wrong running this invoice: {e}"}))
         q.put(None)
 
     threading.Thread(target=work, daemon=True).start()
@@ -192,9 +194,9 @@ def run_stream(name: str):
         yield "retry: 100000\n\n"
         while True:
             try:
-                item = q.get(timeout=15)
+                item = q.get(timeout=5)
             except queue.Empty:
-                yield ": still working\n\n"  # keep the connection open during slow reads
+                yield ": still working\n\n"  # a heartbeat every few seconds keeps the connection open during slow reads
                 continue
             if item is None:
                 break
