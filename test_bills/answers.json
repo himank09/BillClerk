@@ -1,0 +1,762 @@
+[
+  {
+    "id": "T01",
+    "file": "T01_unknown_vendor.pdf",
+    "problem": "A supplier we've never onboarded",
+    "expected": "REJECT",
+    "why": "Kaveri Textile Machinery isn't an approved vendor, so nothing can be paid until procurement onboards it.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Kaveri Textile Machinery Pvt Ltd",
+      "vendor_gstin": "33AAKCK7731J1ZA",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "KTM/26-27/0215",
+      "invoice_date": "22-Oct-2026",
+      "po_reference": "PO-2026-1005",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Spare blades for fabric cutting machine",
+          "hsn_sac": "8451",
+          "qty": 10,
+          "unit": "Nos",
+          "unit_price": 1850,
+          "gst_rate": 18,
+          "taxable_value": 18500
+        }
+      ],
+      "taxable_value": 18500,
+      "tax": {
+        "CGST": 1665.0,
+        "SGST": 1665.0
+      },
+      "total": 21830,
+      "bank": {
+        "bank_name": "Indian Bank",
+        "bank_account": "6123094471",
+        "ifsc": "IDIB000C041"
+      }
+    }
+  },
+  {
+    "id": "T02",
+    "file": "T02_invalid_gstin.pdf",
+    "problem": "Apex's GSTIN with a wrong last character",
+    "expected": "HOLD",
+    "why": "33AAJCA3417L1ZX fails the GSTIN check digit (the real one ends in Q), so it's either a typo or not Apex.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZX",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/26-27/0071",
+      "invoice_date": "27-Oct-2026",
+      "po_reference": "PO-2026-1005",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Cross-cut paper shredder, 20-sheet",
+          "hsn_sac": "8472",
+          "qty": 2,
+          "unit": "Nos",
+          "unit_price": 14500,
+          "gst_rate": 18,
+          "taxable_value": 29000
+        }
+      ],
+      "taxable_value": 29000,
+      "tax": {
+        "CGST": 2610.0,
+        "SGST": 2610.0
+      },
+      "total": 34220,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T03",
+    "file": "T03_billed_to_another_company.pdf",
+    "problem": "Addressed to a different company",
+    "expected": "REJECT",
+    "why": "The invoice is made out to Sri Murugan Knits, not RJ Garments, so RJ Garments can't pay it or claim its GST.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Bluewave IT Services LLP",
+      "vendor_gstin": "29AAQFB7720M1ZT",
+      "buyer_gstin": "33AAICS4410P1Z6",
+      "invoice_number": "BW/1026/122",
+      "invoice_date": "29 Oct 2026",
+      "po_reference": "PO-2026-1007",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Managed IT support & helpdesk - November 2026",
+          "hsn_sac": "998313",
+          "qty": 1,
+          "unit": "Month",
+          "unit_price": 85000,
+          "gst_rate": 18,
+          "taxable_value": 85000
+        },
+        {
+          "description": "Cloud backup licence (per user per month)",
+          "hsn_sac": "998315",
+          "qty": 25,
+          "unit": "Users",
+          "unit_price": 600,
+          "gst_rate": 18,
+          "taxable_value": 15000
+        }
+      ],
+      "taxable_value": 100000,
+      "tax": {
+        "IGST": 18000
+      },
+      "total": 118000,
+      "bank": {
+        "bank_name": "ICICI Bank",
+        "bank_account": "002105019874",
+        "ifsc": "ICIC0000021"
+      }
+    }
+  },
+  {
+    "id": "T04",
+    "file": "T04_total_does_not_add_up.pdf",
+    "problem": "Printed total is ₹1,000 too high",
+    "expected": "HOLD",
+    "why": "₹29,000 + ₹5,220 GST = ₹34,220, but the invoice asks for ₹35,220.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/26-27/0074",
+      "invoice_date": "28-Oct-2026",
+      "po_reference": "PO-2026-1005",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Cross-cut paper shredder, 20-sheet",
+          "hsn_sac": "8472",
+          "qty": 2,
+          "unit": "Nos",
+          "unit_price": 14500,
+          "gst_rate": 18,
+          "taxable_value": 29000
+        }
+      ],
+      "taxable_value": 29000,
+      "tax": {
+        "CGST": 2610.0,
+        "SGST": 2610.0
+      },
+      "total": 35220,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T05",
+    "file": "T05_gst_charged_at_12_percent.pdf",
+    "problem": "GST charged at 12% on an 18% service",
+    "expected": "HOLD",
+    "why": "The line says 18%, so GST should be ₹3,240; only ₹2,160 is charged. The total adds up, so only the rate check catches it.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Coromandel Facility Services Pvt Ltd",
+      "vendor_gstin": "33AAECC9183R1ZY",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "CFS/OCT/2026/090",
+      "invoice_date": "30.10.2026",
+      "po_reference": "PO-2026-1008",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Pest control services - quarterly contract",
+          "hsn_sac": "998531",
+          "qty": 1,
+          "unit": "Quarter",
+          "unit_price": 18000,
+          "gst_rate": 18,
+          "taxable_value": 18000
+        }
+      ],
+      "taxable_value": 18000,
+      "tax": {
+        "CGST": 1080,
+        "SGST": 1080
+      },
+      "total": 20160,
+      "bank": {
+        "bank_name": "Indian Bank",
+        "bank_account": "7041128856",
+        "ifsc": "IDIB000A031"
+      }
+    }
+  },
+  {
+    "id": "T06",
+    "file": "T06_cgst_sgst_unequal.pdf",
+    "problem": "CGST and SGST not split equally",
+    "expected": "HOLD",
+    "why": "Same total, but CGST ₹3,132 and SGST ₹2,088. They must be equal halves (₹2,610 each).",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/26-27/0077",
+      "invoice_date": "29-Oct-2026",
+      "po_reference": "PO-2026-1005",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Cross-cut paper shredder, 20-sheet",
+          "hsn_sac": "8472",
+          "qty": 2,
+          "unit": "Nos",
+          "unit_price": 14500,
+          "gst_rate": 18,
+          "taxable_value": 29000
+        }
+      ],
+      "taxable_value": 29000,
+      "tax": {
+        "CGST": 3132,
+        "SGST": 2088.0
+      },
+      "total": 34220,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T07",
+    "file": "T07_dated_in_the_future.pdf",
+    "problem": "Dated 15 January 2027",
+    "expected": "HOLD",
+    "why": "An invoice can't be dated in the future; the date needs confirming before it's booked.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Konkan Tech Hardware Pvt Ltd",
+      "vendor_gstin": "27AAGCK6612D1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "KTH/26-27/1251",
+      "invoice_date": "15 Jan 2027",
+      "po_reference": "PO-2026-1011",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Wireless 2D barcode scanner with cradle",
+          "hsn_sac": "8471",
+          "qty": 2,
+          "unit": "Nos",
+          "unit_price": 9800,
+          "gst_rate": 18,
+          "taxable_value": 19600
+        }
+      ],
+      "taxable_value": 19600,
+      "tax": {
+        "IGST": 3528
+      },
+      "total": 23128,
+      "bank": {
+        "bank_name": "Kotak Mahindra Bank",
+        "bank_account": "9912245087",
+        "ifsc": "KKBK0000652"
+      }
+    }
+  },
+  {
+    "id": "T08",
+    "file": "T08_more_than_a_year_old.pdf",
+    "problem": "Dated August 2025",
+    "expected": "HOLD",
+    "why": "Over a year old, so someone should find out why it's arriving now (and the order it quotes is from 2026).",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/25-26/0018",
+      "invoice_date": "12-Aug-2025",
+      "po_reference": "PO-2026-1005",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Cross-cut paper shredder, 20-sheet",
+          "hsn_sac": "8472",
+          "qty": 1,
+          "unit": "Nos",
+          "unit_price": 14500,
+          "gst_rate": 18,
+          "taxable_value": 14500
+        }
+      ],
+      "taxable_value": 14500,
+      "tax": {
+        "CGST": 1305.0,
+        "SGST": 1305.0
+      },
+      "total": 17110,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T09",
+    "file": "T09_order_number_does_not_exist.pdf",
+    "problem": "Quotes PO-2026-1099, which doesn't exist",
+    "expected": "HOLD",
+    "why": "There's no such purchase order, so the vendor has to confirm the right one.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Sahyadri Industrial Packaging Pvt Ltd",
+      "vendor_gstin": "27AAKCS5506P1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "SIP/2627/0402",
+      "invoice_date": "30/10/2026",
+      "po_reference": "PO-2026-1099",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "LLDPE stretch wrap film, 500mm x 23 micron",
+          "hsn_sac": "3920",
+          "qty": 40,
+          "unit": "Rolls",
+          "unit_price": 250,
+          "gst_rate": 18,
+          "taxable_value": 10000
+        }
+      ],
+      "taxable_value": 10000,
+      "tax": {
+        "IGST": 1800
+      },
+      "total": 11800,
+      "bank": {
+        "bank_name": "Bank of Maharashtra",
+        "bank_account": "60284417730",
+        "ifsc": "MAHB0000417"
+      }
+    }
+  },
+  {
+    "id": "T10",
+    "file": "T10_another_vendors_order.pdf",
+    "problem": "Apex billing against Konkan's laptop order",
+    "expected": "REJECT",
+    "why": "PO-2026-1009 was raised on Konkan Tech Hardware, not Apex.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/26-27/0080",
+      "invoice_date": "30-Oct-2026",
+      "po_reference": "PO-2026-1009",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Laptop, 14-inch, i5 / 16GB / 512GB SSD",
+          "hsn_sac": "8471",
+          "qty": 2,
+          "unit": "Nos",
+          "unit_price": 68500,
+          "gst_rate": 18,
+          "taxable_value": 137000
+        }
+      ],
+      "taxable_value": 137000,
+      "tax": {
+        "CGST": 12330.0,
+        "SGST": 12330.0
+      },
+      "total": 161660,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T11",
+    "file": "T11_price_above_order.pdf",
+    "problem": "Shredders at ₹15,900 instead of ₹14,500",
+    "expected": "HOLD",
+    "why": "About 10% above the agreed price, far beyond the 1% / ₹500 tolerance.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/26-27/0083",
+      "invoice_date": "31-Oct-2026",
+      "po_reference": "PO-2026-1005",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Cross-cut paper shredder, 20-sheet",
+          "hsn_sac": "8472",
+          "qty": 2,
+          "unit": "Nos",
+          "unit_price": 15900,
+          "gst_rate": 18,
+          "taxable_value": 31800
+        }
+      ],
+      "taxable_value": 31800,
+      "tax": {
+        "CGST": 2862.0,
+        "SGST": 2862.0
+      },
+      "total": 37524,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T12",
+    "file": "T12_item_not_on_order.pdf",
+    "problem": "An extra repair visit nobody ordered",
+    "expected": "HOLD",
+    "why": "The ₹7,500 repair visit isn't on PO-2026-1007, and it takes the bill over the order value.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Bluewave IT Services LLP",
+      "vendor_gstin": "29AAQFB7720M1ZT",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "BW/1126/140",
+      "invoice_date": "30 Oct 2026",
+      "po_reference": "PO-2026-1007",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Managed IT support & helpdesk - November 2026",
+          "hsn_sac": "998313",
+          "qty": 1,
+          "unit": "Month",
+          "unit_price": 85000,
+          "gst_rate": 18,
+          "taxable_value": 85000
+        },
+        {
+          "description": "Cloud backup licence (per user per month)",
+          "hsn_sac": "998315",
+          "qty": 25,
+          "unit": "Users",
+          "unit_price": 600,
+          "gst_rate": 18,
+          "taxable_value": 15000
+        },
+        {
+          "description": "On-site laptop repair visit (2 engineers)",
+          "hsn_sac": "998713",
+          "qty": 1,
+          "unit": "Visit",
+          "unit_price": 7500,
+          "gst_rate": 18,
+          "taxable_value": 7500
+        }
+      ],
+      "taxable_value": 107500,
+      "tax": {
+        "IGST": 19350
+      },
+      "total": 126850,
+      "bank": {
+        "bank_name": "ICICI Bank",
+        "bank_account": "002105019874",
+        "ifsc": "ICIC0000021"
+      }
+    }
+  },
+  {
+    "id": "T13",
+    "file": "T13_more_than_ordered.pdf",
+    "problem": "20 keyboard sets billed, 15 ordered",
+    "expected": "HOLD",
+    "why": "Five more than the order allows.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/26-27/0086",
+      "invoice_date": "31-Oct-2026",
+      "po_reference": "PO-2026-1010",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "USB-C docking station, dual display",
+          "hsn_sac": "8471",
+          "qty": 6,
+          "unit": "Nos",
+          "unit_price": 6200,
+          "gst_rate": 18,
+          "taxable_value": 37200
+        },
+        {
+          "description": "Wireless keyboard and mouse combo",
+          "hsn_sac": "8471",
+          "qty": 20,
+          "unit": "Nos",
+          "unit_price": 1450,
+          "gst_rate": 18,
+          "taxable_value": 29000
+        }
+      ],
+      "taxable_value": 66200,
+      "tax": {
+        "CGST": 5958.0,
+        "SGST": 5958.0
+      },
+      "total": 78116,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T14",
+    "file": "T14_no_order_number_unclear.pdf",
+    "problem": "No order number, and it fits neither open order",
+    "expected": "HOLD",
+    "why": "Coromandel has two open orders (housekeeping, pest control); this matches neither, so a person must pick.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Coromandel Facility Services Pvt Ltd",
+      "vendor_gstin": "33AAECC9183R1ZY",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "CFS/OCT/2026/094",
+      "invoice_date": "31.10.2026",
+      "po_reference": null,
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Additional facility support staff - Diwali week",
+          "hsn_sac": "998533",
+          "qty": 1,
+          "unit": "Job",
+          "unit_price": 30000,
+          "gst_rate": 18,
+          "taxable_value": 30000
+        }
+      ],
+      "taxable_value": 30000,
+      "tax": {
+        "CGST": 2700.0,
+        "SGST": 2700.0
+      },
+      "total": 35400,
+      "bank": {
+        "bank_name": "Indian Bank",
+        "bank_account": "7041128856",
+        "ifsc": "IDIB000A031"
+      }
+    }
+  },
+  {
+    "id": "T15",
+    "file": "T15_two_problems_at_once.pdf",
+    "problem": "Wrong GST type and a new bank account",
+    "expected": "HOLD",
+    "why": "A Mumbai vendor billing Tamil Nadu must charge IGST, not CGST + SGST, and the bank account has changed.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Konkan Tech Hardware Pvt Ltd",
+      "vendor_gstin": "27AAGCK6612D1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "KTH/26-27/1260",
+      "invoice_date": "30 Oct 2026",
+      "po_reference": "PO-2026-1011",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Wireless 2D barcode scanner with cradle",
+          "hsn_sac": "8471",
+          "qty": 3,
+          "unit": "Nos",
+          "unit_price": 9800,
+          "gst_rate": 18,
+          "taxable_value": 29400
+        }
+      ],
+      "taxable_value": 29400,
+      "tax": {
+        "CGST": 2646.0,
+        "SGST": 2646.0
+      },
+      "total": 34692,
+      "bank": {
+        "bank_name": "Yes Bank",
+        "bank_account": "018763300004412",
+        "ifsc": "YESB0000187"
+      }
+    }
+  },
+  {
+    "id": "T16",
+    "file": "T16_rough_scan_clean_invoice.pdf",
+    "problem": "A crooked, grainy scan of a correct bill",
+    "expected": "APPROVE",
+    "why": "Nothing is wrong with it; it's here to check a poor scan is still read correctly.",
+    "needs_first": null,
+    "printed": {
+      "vendor_name": "Coromandel Facility Services Pvt Ltd",
+      "vendor_gstin": "33AAECC9183R1ZY",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "CFS/OCT/2026/082",
+      "invoice_date": "30.10.2026",
+      "po_reference": "PO-2026-1008",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Pest control services - quarterly contract",
+          "hsn_sac": "998531",
+          "qty": 1,
+          "unit": "Quarter",
+          "unit_price": 18000,
+          "gst_rate": 18,
+          "taxable_value": 18000
+        }
+      ],
+      "taxable_value": 18000,
+      "tax": {
+        "CGST": 1620.0,
+        "SGST": 1620.0
+      },
+      "total": 21240,
+      "bank": {
+        "bank_name": "Indian Bank",
+        "bank_account": "7041128856",
+        "ifsc": "IDIB000A031"
+      }
+    }
+  },
+  {
+    "id": "T17",
+    "file": "T17_number_reused_after_01.pdf",
+    "problem": "Reuses invoice number 0042 for a different bill",
+    "expected": "HOLD",
+    "why": "Apex already billed AOS/26-27/0042 (example 01). GST rules need a new number per invoice in a year. Save example 01 to records first.",
+    "needs_first": "01",
+    "printed": {
+      "vendor_name": "Apex Office Supplies Pvt Ltd",
+      "vendor_gstin": "33AAJCA3417L1ZQ",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "AOS/26-27/0042",
+      "invoice_date": "16-Oct-2026",
+      "po_reference": "PO-2026-1010",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Wireless keyboard and mouse combo",
+          "hsn_sac": "8471",
+          "qty": 4,
+          "unit": "Nos",
+          "unit_price": 1450,
+          "gst_rate": 18,
+          "taxable_value": 5800
+        }
+      ],
+      "taxable_value": 5800,
+      "tax": {
+        "CGST": 522.0,
+        "SGST": 522.0
+      },
+      "total": 6844,
+      "bank": {
+        "bank_name": "HDFC Bank",
+        "bank_account": "50200041172839",
+        "ifsc": "HDFC0001842"
+      }
+    }
+  },
+  {
+    "id": "T18",
+    "file": "T18_resent_with_new_number_after_02.pdf",
+    "problem": "October's IT bill sent again under a new number",
+    "expected": "HOLD",
+    "why": "Same order and amount as example 02, just renumbered, which is how double payments slip through. Save example 02 to records first.",
+    "needs_first": "02",
+    "printed": {
+      "vendor_name": "Bluewave IT Services LLP",
+      "vendor_gstin": "29AAQFB7720M1ZT",
+      "buyer_gstin": "33AAKCR5148N1ZW",
+      "invoice_number": "BW/1026/125",
+      "invoice_date": "31 Oct 2026",
+      "po_reference": "PO-2026-1002",
+      "place_of_supply": "Tamil Nadu (33)",
+      "line_items": [
+        {
+          "description": "Managed IT support & helpdesk - October 2026",
+          "hsn_sac": "998313",
+          "qty": 1,
+          "unit": "Month",
+          "unit_price": 85000,
+          "gst_rate": 18,
+          "taxable_value": 85000
+        },
+        {
+          "description": "Cloud backup licence (per user per month)",
+          "hsn_sac": "998315",
+          "qty": 25,
+          "unit": "Users",
+          "unit_price": 600,
+          "gst_rate": 18,
+          "taxable_value": 15000
+        }
+      ],
+      "taxable_value": 100000,
+      "tax": {
+        "IGST": 18000
+      },
+      "total": 118000,
+      "bank": {
+        "bank_name": "ICICI Bank",
+        "bank_account": "002105019874",
+        "ifsc": "ICIC0000021"
+      }
+    }
+  },
+  {
+    "id": "T19",
+    "file": "T19_quotation_not_invoice.pdf",
+    "problem": "A quotation, not an invoice",
+    "expected": "REJECT",
+    "why": "Nothing is owed on a quotation; it should be removed from the invoice queue.",
+    "needs_first": null,
+    "printed": null
+  },
+  {
+    "id": "T20",
+    "file": "T20_not_really_a_pdf.pdf",
+    "problem": "A text file renamed to .pdf",
+    "expected": "REJECT",
+    "why": "It can't be opened as a PDF, so the sender is asked for a fresh copy.",
+    "needs_first": null,
+    "printed": null
+  }
+]
