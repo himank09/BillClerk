@@ -35,11 +35,13 @@ mark { background: #FFF0A8; color: var(--ink); font-weight: 600; padding: 0 0.25
 
 /* ---------- header ---------- */
 .top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 1.5rem; padding: 0 1.5rem; height: 58px; background: var(--ink); color: #fff; }
-.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.1rem; white-space: nowrap; background: none; border: 0; color: inherit; padding: 0; cursor: pointer; font-family: inherit; }
+.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.1rem; white-space: nowrap; margin-left: 0.5rem; }
 .arrows { display: flex; gap: 0.3rem; margin-right: -0.5rem; }
 .arrows button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; display: grid; place-items: center; padding: 0; }
 .arrows button:hover:not(:disabled) { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.35); }
 .arrows button:disabled { opacity: .3; cursor: default; }
+.arrows .home { width: auto; border-radius: 17px; padding: 0 0.8rem 0 0.65rem; gap: 0.4rem; display: flex; align-items: center; margin-left: 0.25rem; font: inherit; font-size: 0.88rem; font-weight: 600; }
+.arrows .home[aria-current] { background: rgba(167,156,242,.22); border-color: rgba(167,156,242,.55); }
 .brand .logo { color: #A79CF2; }
 .brand small { font-weight: 400; color: #B9C6D2; font-size: 0.88rem; }
 nav { display: flex; gap: 0.25rem; height: 100%; }
@@ -370,7 +372,7 @@ h2.table-h { font-size: 1.1rem; margin: 2rem 0 0.6rem; }
   .tour .nav { justify-content: space-between; }
   .modal .box { border-radius: 18px 18px 0 0; max-height: 88vh; width: 100%; }
 }
-@media (max-width: 520px) { .brand .bt { display: none; } }
+@media (max-width: 520px) { .brand .bt, .arrows .home span { display: none; } .arrows .home { width: 34px; padding: 0; justify-content: center; } }
 @media (prefers-reduced-motion: reduce) { .stamp.land { animation: none; } .step[data-s="running"] .i { animation-duration: 3s; } .drop { transition: none; } }
 </style>
 </head>
@@ -381,8 +383,9 @@ h2.table-h { font-size: 1.1rem; margin: 2rem 0 0.6rem; }
   <div class="arrows">
     <button id="nav-back" aria-label="Back" title="Back" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
     <button id="nav-fwd" aria-label="Forward" title="Forward" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
+    <button id="nav-home" class="home" aria-label="Home: upload a new invoice" title="Home"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.5L8 3l5.5 4.5"/><path d="M4 6.5V13h3V9.5h2V13h3V6.5"/></svg><span>Home</span></button>
   </div>
-  <button class="brand" id="home" title="Upload page"><svg class="logo" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6h-4z"/><path d="M5 13h14v4H5z"/><path d="M7 21h10"/><path d="M10 9v4M14 9v4"/></svg><span class="bt">BillClerk</span> <small>for RJ Garments</small></button>
+  <div class="brand"><svg class="logo" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6h-4z"/><path d="M5 13h14v4H5z"/><path d="M7 21h10"/><path d="M10 9v4M14 9v4"/></svg><span class="bt">BillClerk</span> <small>for RJ Garments</small></div>
   <nav aria-label="Pages">
     <button data-view="check" aria-current="page">Check</button>
     <button data-view="history">History</button>
@@ -525,7 +528,11 @@ function remember(entry) {
   history.pushState({ at }, ""); arrows();
   return entry;
 }
-function arrows() { $("#nav-back").disabled = running || at <= 0; $("#nav-fwd").disabled = running || at >= trail.length - 1; }
+function arrows() {
+  $("#nav-back").disabled = running || at <= 0; $("#nav-fwd").disabled = running || at >= trail.length - 1;
+  $("#nav-home").disabled = running;
+  trail[at]?.screen === "home" ? $("#nav-home").setAttribute("aria-current", "page") : $("#nav-home").removeAttribute("aria-current");
+}
 function revisit(e) {
   endTour(); closeDrawer(); closeSamples();
   if (e.screen === "home") { showView("check"); goHome(); }
@@ -541,7 +548,7 @@ window.addEventListener("popstate", ev => {
 });
 $("#nav-back").onclick = () => history.back();
 $("#nav-fwd").onclick = () => history.forward();
-$("#home").onclick = () => { if (running) return; endTour(); closeDrawer(); showView("check"); goHome(); remember({ screen: "home" }); };
+$("#nav-home").onclick = () => { if (running) return; endTour(); closeDrawer(); showView("check"); goHome(); remember({ screen: "home" }); };
 function goHome() { $("#workspace").hidden = true; $("#landing").hidden = false; window.scrollTo(0, 0); }
 function show(v) { showView(v); remember(v === "check" && !$("#workspace").hidden && lastEntry() ? { ...lastEntry() } : { screen: v === "check" ? "home" : v }); }
 const lastEntry = () => [...trail].reverse().find(e => e.screen === "result" && e.d);
@@ -943,7 +950,7 @@ const TOUR = [
   { id: "09", say: "From a <mark>blocked vendor</mark>: rejected.", last: true },
 ];
 let tourAt = -1;
-trail.push({ screen: "home" }); at = 0; history.replaceState({ at }, "");
+trail.push({ screen: "home" }); at = 0; history.replaceState({ at }, ""); arrows();
 const tourSample = i => samples.find(x => x.id === TOUR[i].id);
 function goTour(i) {
   tourAt = i; document.body.classList.add("touring");
