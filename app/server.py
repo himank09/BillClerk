@@ -11,7 +11,13 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    StreamingResponse,
+)
 
 from . import records
 from .checks import process
@@ -42,6 +48,14 @@ SAMPLES = {  # *word* is shown highlighted
 }
 
 app = FastAPI(title="BillClerk")
+
+# The launcher page on GitHub Pages checks whether this server is awake.
+app.add_middleware(CORSMiddleware, allow_origins=["https://himank09.github.io"], allow_methods=["GET"])
+
+
+@app.get("/api/ping")
+def ping():
+    return {"app": "billclerk", "ok": True}
 
 
 # ---- deleting uploads ------------------------------------------------------

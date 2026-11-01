@@ -71,6 +71,8 @@ The repository includes `render.yaml`, so it deploys to [Render](https://render.
 
 On Render's free plan the app sleeps after about 15 minutes without visitors and takes up to a minute to wake. History and uploads start fresh after each restart; the 13 example invoices and their saved readings are part of the code, so they always work. Each visitor can upload 20 files an hour, so nobody can use up the Gemini quota.
 
+To hide that wait, `docs/index.html` is a small launcher page served free by GitHub Pages, which never sleeps. It opens instantly, explains the wait, wakes the server and opens BillClerk the moment it's ready. Share the launcher's address rather than the app's.
+
 ## The test data
 
 There's no public dataset that links real invoices to purchase orders and a vendor list (companies keep that private), so the data here is built to follow real Indian GST rules. Every company is fictional. The GSTINs have real state codes and pass the official check-digit test, but belong to no one.
@@ -129,6 +131,7 @@ app/
   records.py           records, history and the audit trail (SQLite)
   server.py            the web app's server
   static/index.html    the web page
+docs/index.html        launcher page (GitHub Pages) that wakes the free server
 data/
   buyer.json, vendors.csv, purchase_orders.csv, purchase_order_lines.csv
   rules.json           tolerance, approval limit and the other settings

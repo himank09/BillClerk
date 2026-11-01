@@ -91,6 +91,10 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
 .facts .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.4rem; }
 .upload-err { margin-top: 1rem; color: var(--reject); font-weight: 500; }
 .upload-ok { margin-top: 1rem; color: var(--pass); font-weight: 500; }
+.wake { position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 30; width: min(560px, calc(100% - 2rem));
+  display: flex; gap: 0.8rem; align-items: flex-start; background: var(--ink); color: #fff; border-radius: 12px; padding: 0.85rem 1rem; box-shadow: 0 18px 40px -18px rgba(0,0,0,.5); font-size: 0.93rem; }
+.wake b { display: block; } .wake span { color: #C9D4DE; }
+.wake button { margin-left: auto; background: none; border: 0; color: #fff; font-size: 1.3rem; line-height: 1; padding: 0 0.2rem; }
 .link.danger { color: var(--reject); }
 
 /* ---------- workspace (after an upload) ---------- */
@@ -985,7 +989,18 @@ async function loadRules() {
       <td>${v.status === "approved" ? `<span class="tag APPROVE">Approved</span>` : `<span class="tag REJECT">Blocked</span> <span class="muted small">${esc(v.block_reason)}</span>`}</td></tr>`).join("")}</tbody></table>`;
 }
 
+/* The free server sleeps when nobody uses it, so the first visit can take up to a minute.
+   If this page was slow to arrive, say why once it's here, so it doesn't look broken. */
+function wakeNote(force) {
+  const nav = performance.getEntriesByType("navigation")[0];
+  if (!force && !(nav && nav.responseStart > 8000)) return;
+  document.body.insertAdjacentHTML("beforeend", `<div class="wake" role="status"><div><b>Sorry for the wait.</b>
+    <span>This demo runs on a free server that sleeps when no one is using it. It's awake now, so everything will be quick.</span></div>
+    <button aria-label="Close" onclick="this.parentElement.remove()">×</button></div>`);
+  setTimeout(() => document.querySelector(".wake")?.remove(), 15000);
+}
 (async () => {
+  wakeNote(new URLSearchParams(location.search).has("wakenote"));
   await loadSamples();
   const s = await api("/api/setup");
   $("#mode").textContent = s.extractor === "mock" ? "Demo mode: saved answers" : "";
