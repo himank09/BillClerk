@@ -1,0 +1,45 @@
+{
+  "model": "gemini-3-flash-preview",
+  "file": "10_konkan_over_approval_limit.pdf",
+  "fields": {
+    "vendor_name": "Konkan Tech Hardware Pvt Ltd",
+    "vendor_gstin": "27AAGCK6612D1ZQ",
+    "buyer_name": "RJ Garments Pvt Ltd",
+    "buyer_gstin": "33AAKCR5148N1ZW",
+    "invoice_number": "KTH/26-27/1180",
+    "invoice_date": "24 Oct 2026",
+    "po_reference": "PO-2026-1009",
+    "place_of_supply": "Tamil Nadu (33)",
+    "line_items": [
+      {
+        "description": "Laptop, 14-inch, i5 / 16GB / 512GB SSD",
+        "hsn_sac": "8471",
+        "qty": 8.0,
+        "unit": "Nos",
+        "unit_price": 68500.0,
+        "gst_rate": 18.0,
+        "taxable_value": 548000.0
+      }
+    ],
+    "taxable_value": 548000.0,
+    "cgst": null,
+    "sgst": null,
+    "igst": 98640.0,
+    "total": 646640.0,
+    "bank_name": "Kotak Mahindra Bank",
+    "bank_account": "9912245087",
+    "ifsc": "KKBK0000652",
+    "is_invoice": true,
+    "document_type": "tax invoice",
+    "has_handwritten_changes": false,
+    "handwritten_notes": null,
+    "confidence": {
+      "vendor_gstin": 1.0,
+      "invoice_number": 1.0,
+      "invoice_date": 1.0,
+      "po_reference": 1.0,
+      "line_items": 1.0,
+      "total": 1.0
+    }
+  }
+}

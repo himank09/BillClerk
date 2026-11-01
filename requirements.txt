@@ -1,0 +1,10 @@
+pdfplumber
+google-genai
+python-dotenv
+rapidfuzz
+pydantic
+reportlab
+pillow
+fastapi
+uvicorn
+python-multipart

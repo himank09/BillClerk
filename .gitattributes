@@ -1,0 +1,6 @@
+# invoices, photos and fonts must stay byte-for-byte identical (saved readings are keyed by fingerprint)
+*.pdf binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.ttf binary

@@ -1,0 +1,45 @@
+{
+  "model": "gemini-3-flash-preview",
+  "file": "07_apex_wrong_tax_type.pdf",
+  "fields": {
+    "vendor_name": "APEX OFFICE SUPPLIES PVT LTD",
+    "vendor_gstin": "33AAJCA3417L1ZQ",
+    "buyer_name": "RJ Garments Pvt Ltd",
+    "buyer_gstin": "33AAKCR5148N1ZW",
+    "invoice_number": "AOS/26-27/0058",
+    "invoice_date": "21-Oct-2026",
+    "po_reference": "PO-2026-1005",
+    "place_of_supply": "Tamil Nadu (33)",
+    "line_items": [
+      {
+        "description": "Cross-cut paper shredder, 20-sheet",
+        "hsn_sac": "8472",
+        "qty": 2.0,
+        "unit": "Nos",
+        "unit_price": 14500.0,
+        "gst_rate": 18.0,
+        "taxable_value": 29000.0
+      }
+    ],
+    "taxable_value": 29000.0,
+    "cgst": null,
+    "sgst": null,
+    "igst": 5220.0,
+    "total": 34220.0,
+    "bank_name": "HDFC Bank",
+    "bank_account": "50200041172839",
+    "ifsc": "HDFC0001842",
+    "is_invoice": true,
+    "document_type": "tax invoice",
+    "has_handwritten_changes": false,
+    "handwritten_notes": null,
+    "confidence": {
+      "vendor_gstin": 1.0,
+      "invoice_number": 1.0,
+      "invoice_date": 1.0,
+      "po_reference": 1.0,
+      "line_items": 1.0,
+      "total": 1.0
+    }
+  }
+}

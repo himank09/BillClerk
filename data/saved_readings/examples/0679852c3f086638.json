@@ -1,0 +1,54 @@
+{
+  "model": "gemini-3.1-flash-lite",
+  "file": "12_coromandel_handwritten_changes.pdf",
+  "fields": {
+    "vendor_name": "Coromandel Facility Services Pvt Ltd",
+    "vendor_gstin": "33AAECC9183R1ZY",
+    "buyer_name": "The Manager - Administration, RJ Garments Pvt Ltd",
+    "buyer_gstin": "33AAKCR5148N1ZW",
+    "invoice_number": "CFS/OCT/2026/081",
+    "invoice_date": "30.10.2026",
+    "po_reference": "PO-2026-1008",
+    "place_of_supply": "Tamil Nadu",
+    "line_items": [
+      {
+        "description": "Pest control services - quarterly contract",
+        "hsn_sac": "998531",
+        "qty": null,
+        "unit": null,
+        "unit_price": null,
+        "gst_rate": null,
+        "taxable_value": 18000.0
+      },
+      {
+        "description": "Addl. treatment - canteen area",
+        "hsn_sac": null,
+        "qty": null,
+        "unit": null,
+        "unit_price": null,
+        "gst_rate": null,
+        "taxable_value": 4500.0
+      }
+    ],
+    "taxable_value": 22500.0,
+    "cgst": 2025.0,
+    "sgst": 2025.0,
+    "igst": null,
+    "total": 26550.0,
+    "bank_name": "Indian Bank",
+    "bank_account": "7041128856",
+    "ifsc": "IDIB000A031",
+    "is_invoice": true,
+    "document_type": "tax invoice",
+    "has_handwritten_changes": true,
+    "handwritten_notes": "An additional line item for 'Addl. treatment - canteen area' with a value of 4500/- was added by hand, and the total was updated to 26,550/-.",
+    "confidence": {
+      "vendor_gstin": 1.0,
+      "invoice_number": 1.0,
+      "invoice_date": 1.0,
+      "po_reference": 1.0,
+      "line_items": 0.8,
+      "total": 0.8
+    }
+  }
+}

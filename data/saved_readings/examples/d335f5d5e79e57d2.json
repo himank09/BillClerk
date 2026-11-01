@@ -1,0 +1,45 @@
+{
+  "model": "gemini-3-flash-preview",
+  "file": "09_deccan_blocked_vendor.pdf",
+  "fields": {
+    "vendor_name": "DECCAN ELECTRICALS & TRADERS",
+    "vendor_gstin": "36ABCFD2290Q1Z1",
+    "buyer_name": "RJ Garments Pvt Ltd",
+    "buyer_gstin": "33AAKCR5148N1ZW",
+    "invoice_number": "DET/0912",
+    "invoice_date": "19-Oct-2026",
+    "po_reference": "PO-2026-1006",
+    "place_of_supply": "Tamil Nadu (33)",
+    "line_items": [
+      {
+        "description": "LED high-bay light 150W",
+        "hsn_sac": "9405",
+        "qty": 30.0,
+        "unit": "Nos",
+        "unit_price": 3200.0,
+        "gst_rate": 18.0,
+        "taxable_value": 96000.0
+      }
+    ],
+    "taxable_value": 96000.0,
+    "cgst": null,
+    "sgst": null,
+    "igst": 17280.0,
+    "total": 113280.0,
+    "bank_name": "State Bank of India",
+    "bank_account": "38817265541",
+    "ifsc": "SBIN0020063",
+    "is_invoice": true,
+    "document_type": "tax invoice",
+    "has_handwritten_changes": false,
+    "handwritten_notes": null,
+    "confidence": {
+      "vendor_gstin": 1.0,
+      "invoice_number": 1.0,
+      "invoice_date": 1.0,
+      "po_reference": 1.0,
+      "line_items": 1.0,
+      "total": 1.0
+    }
+  }
+}

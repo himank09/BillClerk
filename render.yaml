@@ -1,0 +1,14 @@
+# Render reads this file to set up the live site (render.com → New → Blueprint)
+services:
+  - type: web
+    name: billclerk
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start_app.py
+    healthCheckPath: /api/samples
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: GEMINI_API_KEY
+        sync: false   # Render asks for the key once; it is stored there, never in the code

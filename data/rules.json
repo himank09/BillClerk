@@ -1,0 +1,14 @@
+{
+  "currency": "INR",
+  "tolerance": {
+    "percent": 1.0,
+    "absolute_inr": 500,
+    "rule": "tighter of the two governs, applied to cumulative taxable value per PO"
+  },
+  "approval_limit_inr": 500000,
+  "duplicate_window_days": 365,
+  "max_invoice_age_days": 365,
+  "po_inference_min_confidence": 0.85,
+  "extraction_min_confidence": 0.8,
+  "matching": "2-way (invoice vs PO); GRN / 3-way match out of scope"
+}

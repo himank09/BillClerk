@@ -1,0 +1,54 @@
+{
+  "model": "gemini-3-flash-preview",
+  "file": "06_coromandel_scan_no_po.pdf",
+  "fields": {
+    "vendor_name": "Coromandel Facility Services Pvt Ltd",
+    "vendor_gstin": "33AAECC9183R1ZY",
+    "buyer_name": "RJ Garments Pvt Ltd",
+    "buyer_gstin": "33AAKCR5148N1ZW",
+    "invoice_number": "CFS/OCT/2026/077",
+    "invoice_date": "31.10.2026",
+    "po_reference": null,
+    "place_of_supply": "Tamil Nadu",
+    "line_items": [
+      {
+        "description": "Housekeeping services - Tiruppur factory, October 2026",
+        "hsn_sac": "998533",
+        "qty": null,
+        "unit": null,
+        "unit_price": null,
+        "gst_rate": 18.0,
+        "taxable_value": 64000.0
+      },
+      {
+        "description": "Deep cleaning of cutting floor (one-time)",
+        "hsn_sac": "998533",
+        "qty": null,
+        "unit": null,
+        "unit_price": null,
+        "gst_rate": 18.0,
+        "taxable_value": 8500.0
+      }
+    ],
+    "taxable_value": 72500.0,
+    "cgst": 6525.0,
+    "sgst": 6525.0,
+    "igst": null,
+    "total": 85550.0,
+    "bank_name": "Indian Bank",
+    "bank_account": "7041128856",
+    "ifsc": "IDIB000A031",
+    "is_invoice": true,
+    "document_type": "tax invoice",
+    "has_handwritten_changes": false,
+    "handwritten_notes": null,
+    "confidence": {
+      "vendor_gstin": 1.0,
+      "invoice_number": 1.0,
+      "invoice_date": 1.0,
+      "po_reference": 1.0,
+      "line_items": 1.0,
+      "total": 1.0
+    }
+  }
+}

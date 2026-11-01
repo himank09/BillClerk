@@ -1,0 +1,17 @@
+po_number,line_no,description,hsn_sac,qty,unit,unit_price,gst_rate,line_value
+PO-2026-1001,1,"Toner cartridge, black, 85A compatible",8443,20,Nos,2450,18,49000
+PO-2026-1001,2,Ergonomic mesh office chair with headrest,9401,6,Nos,7800,18,46800
+PO-2026-1002,1,Managed IT support & helpdesk - October 2026,998313,1,Month,85000,18,85000
+PO-2026-1002,2,Cloud backup licence (per user per month),998315,25,Users,600,18,15000
+PO-2026-1003,1,"LLDPE stretch wrap film, 500mm x 23 micron",3920,400,Rolls,250,18,100000
+PO-2026-1004,1,"Housekeeping services - Tiruppur factory, October 2026",998533,1,Month,64000,18,64000
+PO-2026-1004,2,Deep cleaning of cutting floor (one-time),998533,1,Job,8500,18,8500
+PO-2026-1005,1,"Cross-cut paper shredder, 20-sheet",8472,2,Nos,14500,18,29000
+PO-2026-1006,1,LED high-bay light 150W,9405,30,Nos,3200,18,96000
+PO-2026-1007,1,Managed IT support & helpdesk - November 2026,998313,1,Month,85000,18,85000
+PO-2026-1007,2,Cloud backup licence (per user per month),998315,25,Users,600,18,15000
+PO-2026-1008,1,Pest control services - quarterly contract,998531,1,Quarter,18000,18,18000
+PO-2026-1009,1,"Laptop, 14-inch, i5 / 16GB / 512GB SSD",8471,8,Nos,68500,18,548000
+PO-2026-1010,1,"USB-C docking station, dual display",8471,6,Nos,6200,18,37200
+PO-2026-1010,2,Wireless keyboard and mouse combo,8471,15,Nos,1450,18,21750
+PO-2026-1011,1,Wireless 2D barcode scanner with cradle,8471,10,Nos,9800,18,98000

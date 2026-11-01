@@ -1,0 +1,14 @@
+# never publish secrets or the local Python install
+.env
+.env.*
+.venv/
+__pycache__/
+*.pyc
+
+# things the app creates while running (history, uploads, previews)
+data/billclerk.db
+data/uploads/
+data/previews/
+
+# AI readings of uploaded files stay private; only the examples' readings are published
+data/saved_readings/uploads/

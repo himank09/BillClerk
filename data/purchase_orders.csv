@@ -1,0 +1,12 @@
+po_number,vendor_id,po_date,status,description,subtotal,tax_type,tax_amount,total,amount_billed_so_far
+PO-2026-1001,V001,2026-09-29,open,Office consumables and seating - Q3 refresh,95800,CGST+SGST,17244,113044,0
+PO-2026-1002,V002,2026-10-01,open,Managed IT support - October 2026,100000,IGST,18000,118000,0
+PO-2026-1003,V003,2026-09-22,open,Stretch wrap film for export pallets,100000,IGST,18000,118000,0
+PO-2026-1004,V004,2026-10-01,open,Housekeeping services - October 2026,72500,CGST+SGST,13050,85550,0
+PO-2026-1005,V001,2026-10-06,open,Paper shredders for accounts office,29000,CGST+SGST,5220,34220,0
+PO-2026-1006,V005,2026-06-18,cancelled,LED high-bay fittings (cancelled after vendor block),96000,IGST,17280,113280,0
+PO-2026-1007,V002,2026-10-28,open,Managed IT support - November 2026,100000,IGST,18000,118000,0
+PO-2026-1008,V004,2026-10-01,open,Quarterly pest control - Oct-Dec 2026,18000,CGST+SGST,3240,21240,0
+PO-2026-1009,V006,2026-10-12,open,Laptops for new finance team,548000,IGST,98640,646640,0
+PO-2026-1010,V001,2026-10-14,open,Desk accessories for new finance team,58950,CGST+SGST,10611,69561,0
+PO-2026-1011,V006,2026-10-15,open,Barcode scanners for warehouse dispatch,98000,IGST,17640,115640,0

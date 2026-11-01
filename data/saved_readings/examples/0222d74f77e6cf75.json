@@ -1,0 +1,54 @@
+{
+  "model": "gemini-3-flash-preview",
+  "file": "01_apex_happy_intrastate.pdf",
+  "fields": {
+    "vendor_name": "APEX OFFICE SUPPLIES PVT LTD",
+    "vendor_gstin": "33AAJCA3417L1ZQ",
+    "buyer_name": "RJ Garments Pvt Ltd",
+    "buyer_gstin": "33AAKCR5148N1ZW",
+    "invoice_number": "AOS/26-27/0042",
+    "invoice_date": "14-Oct-2026",
+    "po_reference": "PO-2026-1001",
+    "place_of_supply": "Tamil Nadu (33)",
+    "line_items": [
+      {
+        "description": "Toner cartridge, black, 85A compatible",
+        "hsn_sac": "8443",
+        "qty": 20.0,
+        "unit": "Nos",
+        "unit_price": 2450.0,
+        "gst_rate": 18.0,
+        "taxable_value": 49000.0
+      },
+      {
+        "description": "Ergonomic mesh office chair with headrest",
+        "hsn_sac": "9401",
+        "qty": 6.0,
+        "unit": "Nos",
+        "unit_price": 7800.0,
+        "gst_rate": 18.0,
+        "taxable_value": 46800.0
+      }
+    ],
+    "taxable_value": 95800.0,
+    "cgst": 8622.0,
+    "sgst": 8622.0,
+    "igst": null,
+    "total": 113044.0,
+    "bank_name": "HDFC Bank",
+    "bank_account": "50200041172839",
+    "ifsc": "HDFC0001842",
+    "is_invoice": true,
+    "document_type": "tax invoice",
+    "has_handwritten_changes": false,
+    "handwritten_notes": null,
+    "confidence": {
+      "vendor_gstin": 1.0,
+      "invoice_number": 1.0,
+      "invoice_date": 1.0,
+      "po_reference": 1.0,
+      "line_items": 1.0,
+      "total": 1.0
+    }
+  }
+}

@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D2B3A">
+<title>BillClerk · RJ Garments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=Oswald:wght@600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1D2B3A; --ink-soft: #536170; --line: #C9D9CE; --line-faint: #E1EBE4;
+  --paper: #F5F8F3; --white: #FFFFFF;
+  --violet: #4338A0; --violet-dark: #33297F; --violet-soft: #ECEAFB;   /* stamp-pad ink */
+  --margin-red: #E7A3A3;                                                  /* ledger margin rule */
+  --pass: #17784A; --hold: #A5660C; --reject: #B42329; --focus: #2E5BBA;
+  --pass-bg: #E2F3E9; --hold-bg: #FBF0DC; --reject-bg: #FBE4E4;
+  --radius: 14px;
+  font-size: 15px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { font-family: "Schibsted Grotesk", system-ui, sans-serif; color: var(--ink); background: var(--paper); line-height: 1.5; min-height: 100vh; -webkit-tap-highlight-color: transparent; }
+button, input { font: inherit; color: inherit; }
+button, label[for], .tap { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+h1, h2, h3 { margin: 0; line-height: 1.2; }
+p { margin: 0; }
+.muted { color: var(--ink-soft); }
+mark { background: #FFF0A8; color: var(--ink); font-weight: 600; padding: 0 0.25rem; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.small { font-size: 0.85rem; }
+.amt, td.r { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- header ---------- */
+.top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 1.5rem; padding: 0 1.5rem; height: 58px; background: var(--ink); color: #fff; }
+.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.1rem; white-space: nowrap; background: none; border: 0; color: inherit; padding: 0; cursor: pointer; font-family: inherit; }
+.arrows { display: flex; gap: 0.3rem; margin-right: -0.5rem; }
+.arrows button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; display: grid; place-items: center; padding: 0; }
+.arrows button:hover:not(:disabled) { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.35); }
+.arrows button:disabled { opacity: .3; cursor: default; }
+.brand .logo { color: #A79CF2; }
+.brand small { font-weight: 400; color: #B9C6D2; font-size: 0.88rem; }
+nav { display: flex; gap: 0.25rem; height: 100%; }
+nav button { background: none; border: 0; padding: 0 0.85rem; color: #B9C6D2; font-weight: 500; height: 100%; position: relative; }
+nav button:hover { color: #fff; }
+nav button[aria-current="page"] { color: #fff; }
+nav button[aria-current="page"]::after { content: ""; position: absolute; left: 0.6rem; right: 0.6rem; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: #A79CF2; }
+.spacer { flex: 1; }
+.mode { font-size: 0.82rem; color: #F3D9A4; white-space: nowrap; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; border: 1.5px solid var(--line); background: var(--white); border-radius: 10px; padding: 0.6rem 1.05rem; font-weight: 600; min-height: 44px; }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { background: var(--violet); border-color: var(--violet); color: #fff; }
+.btn.primary:hover { background: var(--violet-dark); border-color: var(--violet-dark); }
+.link { background: none; border: 0; padding: 0.2rem; color: var(--violet); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; min-height: 32px; }
+
+/* ---------- landing: the upload is the page ---------- */
+.landing {
+  min-height: calc(100vh - 58px); display: grid; place-items: center; padding: 3rem 1.25rem 4rem;
+  background:
+    linear-gradient(90deg, transparent 0 calc(50% - 400px), var(--margin-red) calc(50% - 400px) calc(50% - 398px), transparent calc(50% - 398px)),
+    repeating-linear-gradient(180deg, transparent 0 31px, rgba(201, 217, 206, .45) 31px 32px),
+    var(--paper);
+}
+.hero { width: min(640px, 100%); text-align: center; }
+.hero h1 { font-size: clamp(1.9rem, 4.2vw, 2.8rem); font-weight: 800; letter-spacing: -0.02em; }
+.hero > p { font-size: 1.08rem; color: var(--ink-soft); margin: 0.8rem auto 1.8rem; max-width: 62ch; }
+.drop {
+  position: relative; display: grid; place-items: center; gap: 0.5rem; padding: 2.6rem 1.5rem 2.3rem;
+  background: var(--white); border: 2.5px dashed #A79CF2; border-radius: 20px; cursor: pointer;
+  box-shadow: 0 18px 40px -24px rgba(67, 56, 160, 0.55); transition: border-color .15s, background .15s, transform .15s;
+}
+.drop:hover, .drop.over { border-color: var(--violet); background: #FBFAFF; }
+.drop.over { transform: scale(1.01); }
+.drop:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop .icon { width: 64px; height: 64px; border-radius: 18px; background: var(--violet-soft); display: grid; place-items: center; color: var(--violet); }
+.drop b { font-size: 1.3rem; }
+.drop span { color: var(--ink-soft); }
+.drop .fake-btn { margin-top: 0.4rem; pointer-events: none; }
+.hero-more { display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 1.1rem; }
+.camera { position: relative; overflow: hidden; }
+.camera input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.only-touch { display: none; }
+@media (pointer: coarse) { .only-touch { display: inline-flex; } .only-mouse { display: none; } }
+.facts { list-style: none; padding: 0; margin: 2.6rem 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: left; }
+.facts li { background: rgba(255,255,255,.75); border: 1px solid var(--line-faint); border-radius: 12px; padding: 0.85rem 0.9rem; font-size: 0.9rem; color: var(--ink-soft); }
+.facts b { display: block; color: var(--ink); font-size: 0.95rem; margin-bottom: 0.15rem; }
+.facts .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.4rem; }
+.upload-err { margin-top: 1rem; color: var(--reject); font-weight: 500; }
+.upload-ok { margin-top: 1rem; color: var(--pass); font-weight: 500; }
+.link.danger { color: var(--reject); }
+
+/* ---------- workspace (after an upload) ---------- */
+.workspace { max-width: 1240px; margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
+.ws-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.ws-head h1 { font-size: 1.5rem; font-weight: 800; overflow-wrap: anywhere; }
+.ws-head p { color: var(--ink-soft); }
+.ws-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); gap: 1.75rem; align-items: start; }
+
+.result { border-radius: var(--radius); overflow: hidden; background: var(--white); border: 1px solid var(--line-faint); box-shadow: 0 14px 34px -26px rgba(29,43,58,.6); margin-bottom: 1.5rem; }
+.result .band { display: flex; gap: 0.9rem; align-items: flex-start; padding: 1rem 1.25rem; color: #fff; }
+.result.APPROVE .band { background: var(--pass); } .result.HOLD .band { background: var(--hold); } .result.REJECT .band { background: var(--reject); }
+.result .badge { width: 40px; height: 40px; flex: none; border-radius: 50%; background: rgba(255,255,255,.2); display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; }
+.result .word { font-size: 0.85rem; font-weight: 700; opacity: 0.92; }
+.result h2 { font-size: 1.22rem; font-weight: 700; }
+.result .also { margin: 0.35rem 0 0; padding-left: 1.1rem; font-size: 0.92rem; opacity: .92; }
+.result .also li { margin: 0.1rem 0; }
+.result .next { margin-top: 0.55rem; font-size: 0.95rem; opacity: .9; max-width: 60ch; }
+.result .body { padding: 0.8rem 1.25rem; }
+.result .body:not(:has(.actions > :not(.quiet), .quiet > *, .emails > *)) { display: none; }
+.result .actions { margin-top: 0; }
+.result .quiet { margin-left: auto; display: flex; gap: 0.9rem; font-size: 0.9rem; }
+.result .quiet .link { color: var(--ink-soft); font-weight: 500; }
+.result .quiet .link.danger { color: var(--reject); }
+.actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
+.saved-note { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--pass); }
+.err { color: var(--reject); font-size: 0.9rem; margin-top: 0.55rem; }
+.emails { margin-top: 0.9rem; }
+.email { background: var(--paper); border-radius: 10px; padding: 0.8rem 0.95rem; margin-top: 0.5rem; }
+.email .sub { font-weight: 700; }
+.email .to { font-size: 0.85rem; color: var(--ink-soft); }
+.email pre { white-space: pre-wrap; font: inherit; font-size: 0.92rem; margin: 0.6rem 0; }
+/* what was read off the invoice, laid out like a bill */
+.read { background: var(--white); border: 1px solid var(--line-faint); border-radius: var(--radius); padding: 1rem 1.15rem 1.1rem; margin-bottom: 1.5rem; }
+.read-head { display: flex; align-items: center; gap: 0.75rem; }
+.read-head b { display: block; font-size: 1.02rem; }
+.read-head div span { font-size: 0.84rem; color: var(--ink-soft); }
+.read-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.6rem; margin: 0.95rem 0 0.9rem; }
+.read-facts div { background: var(--paper); border-radius: 10px; padding: 0.5rem 0.7rem; min-width: 0; }
+.read-facts dt { font-size: 0.75rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+.read-facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.read-facts .pill { font-size: 0.72rem; font-weight: 700; color: var(--violet); background: var(--violet-soft); border-radius: 99px; padding: 0.05rem 0.45rem; margin-left: 0.3rem; white-space: nowrap; }
+.read-lines { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.read-lines td { padding: 0.4rem 0; border-top: 1px solid var(--line-faint); vertical-align: top; }
+.read-lines td.q { color: var(--ink-soft); white-space: nowrap; padding: 0.4rem 0.8rem; text-align: right; }
+.read-lines td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.read-sum { display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 1rem; margin-top: 0.4rem; padding-top: 0.6rem; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.read-sum span { color: var(--ink-soft); } .read-sum b { text-align: right; font-weight: 500; }
+.read-sum .total { font-size: 1.25rem; font-weight: 800; color: var(--ink); }
+.avatar { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 0.9rem; color: #fff; letter-spacing: .02em; }
+.avatar.sm { width: 28px; height: 28px; font-size: 0.72rem; }
+.who { display: flex; align-items: center; gap: 0.6rem; }
+.checking { padding: 2rem 1.25rem; text-align: center; color: var(--ink-soft); background: var(--white); border-radius: var(--radius); border: 1px solid var(--line-faint); margin-bottom: 1.5rem; }
+
+.panel-card + .panel-card { margin-top: 1rem; }
+.panel-card { background: var(--white); border: 1px solid var(--line-faint); border-radius: var(--radius); padding: 0.6rem 1rem 0.4rem; }
+.panel-card h3 { font-size: 0.95rem; padding: 0.45rem 0 0.35rem; display: flex; justify-content: space-between; gap: 1rem; }
+.panel-card h3 span { font-weight: 400; font-size: 0.83rem; color: var(--ink-soft); }
+.steps { list-style: none; margin: 0; padding: 0; }
+.step + .step { border-top: 1px solid var(--line-faint); }
+.step > button { width: 100%; display: grid; grid-template-columns: 1.6rem 8.5rem 1fr 1rem; gap: 0 0.6rem; align-items: center; padding: 0.6rem 0; background: none; border: 0; text-align: left; min-height: 44px; }
+.step > button:disabled { cursor: default; }
+.step .i { width: 1.3rem; height: 1.3rem; border-radius: 50%; display: inline-grid; place-items: center; font-size: 0.72rem; font-weight: 800; color: #fff; }
+.step .name { font-weight: 600; }
+.step .sum { color: var(--ink-soft); font-size: 0.92rem; }
+.step .chev { color: var(--ink-soft); transition: transform .15s; }
+.step > button[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.step[data-s="waiting"] .name { color: #9AA6B1; }
+.step[data-s="waiting"] .i, .step[data-s="skipped"] .i { border: 2px solid var(--line); }
+.step[data-s="running"] .i { border: 2.5px solid var(--violet); border-right-color: transparent; animation: spin .8s linear infinite; }
+.step[data-s="pass"] .i { background: var(--pass); } .step[data-s="pass"] .i::after { content: "✓"; }
+.step[data-s="warn"] .i, .step[data-s="hold"] .i { background: var(--hold); } .step[data-s="warn"] .i::after, .step[data-s="hold"] .i::after { content: "!"; }
+.step[data-s="reject"] .i { background: var(--reject); } .step[data-s="reject"] .i::after { content: "✕"; }
+.step[data-s="hold"] .sum, .step[data-s="warn"] .sum { color: var(--hold); font-weight: 500; }
+.step[data-s="reject"] .sum { color: var(--reject); font-weight: 500; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.detail { list-style: none; margin: 0 0 0.7rem 2.2rem; padding: 0.55rem 0.75rem; font-size: 0.86rem; background: var(--paper); border-radius: 8px; }
+.detail li { display: grid; grid-template-columns: 1.1rem 1fr; padding: 0.12rem 0; }
+.detail .d { grid-column: 2; color: var(--ink-soft); font-size: 0.82rem; overflow-wrap: anywhere; }
+.ok-t { color: var(--pass); } .ok-f { color: var(--reject); } .ok-n { color: var(--ink-soft); }
+.progress { margin: -0.3rem 0 0.55rem 2.2rem; font-size: 0.85rem; color: var(--violet); }
+
+.paper-col { position: sticky; top: 76px; }
+.sheet { position: relative; background: #fff; border-radius: 6px; aspect-ratio: 1 / 1.414; overflow: hidden; box-shadow: 0 1px 0 var(--line), 0 22px 40px -24px rgba(29,43,58,.55); }
+.sheet img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sheet.nopreview { aspect-ratio: auto; min-height: 15rem; display: grid; place-items: start center; background: repeating-linear-gradient(-45deg, #fff 0 12px, #F7F8FA 12px 24px); }
+.sheet .np { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 1.6rem; color: #9AA6B1; font-size: 0.9rem; font-weight: 500; }
+.sheet.nopreview .stamp { top: 68%; }
+.skipnote { color: var(--ink-soft); font-size: 0.88rem; padding: 0.7rem 0 0.15rem 2.2rem; border-top: 1px solid var(--line-faint); }
+.sheet-cap { margin-top: 0.55rem; font-size: 0.84rem; color: var(--ink-soft); display: flex; justify-content: space-between; gap: 1rem; }
+.sheet-cap a { color: var(--violet); font-weight: 600; }
+
+/* the stamp */
+.stamp { position: absolute; left: 50%; top: 62%; pointer-events: none; white-space: nowrap; transform: translate(-50%, -50%) rotate(-9deg);
+  font-family: "Oswald", "Arial Narrow", sans-serif; text-align: center; line-height: 1.05; padding: 0.5rem 1.1rem 0.45rem;
+  border: 4px double currentColor; border-radius: 10px; mix-blend-mode: multiply; opacity: .88; filter: url(#rough); }
+.stamp .big { font-size: clamp(1.25rem, 2.4vw, 2.1rem); letter-spacing: .05em; }
+.stamp.APPROVE .big { font-size: clamp(1rem, 1.9vw, 1.65rem); }
+.stamp .line { font-size: .7rem; letter-spacing: .12em; border-top: 2px solid currentColor; margin-top: .3rem; padding-top: .25rem; }
+.stamp.APPROVE { color: var(--pass); } .stamp.HOLD { color: var(--hold); } .stamp.REJECT { color: var(--reject); }
+.stamp.land { animation: land .42s cubic-bezier(.2,.9,.3,1.15) both; }
+@keyframes land { 0% { transform: translate(-50%,-50%) rotate(-3deg) scale(1.9); opacity: 0; } 60% { opacity: .95; } 100% { transform: translate(-50%,-50%) rotate(-9deg) scale(1); opacity: .88; } }
+
+/* ---------- samples sheet ---------- */
+.modal { position: fixed; inset: 0; z-index: 30; background: rgba(29,43,58,.45); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal .box { background: var(--white); border-radius: 18px; width: min(560px, 100%); max-height: min(720px, 92vh); display: flex; flex-direction: column; overflow: hidden; }
+.modal .box-head { display: flex; justify-content: space-between; align-items: start; gap: 1rem; padding: 1.1rem 1.25rem 0.6rem; }
+.modal .box-head p { color: var(--ink-soft); font-size: 0.88rem; margin-top: 0.2rem; }
+.modal ol { list-style: none; margin: 0; padding: 0.3rem 0.6rem 1rem; overflow-y: auto; }
+.modal li button { width: 100%; display: grid; grid-template-columns: 2rem 1fr; text-align: left; background: none; border: 0; border-radius: 10px; padding: 0.6rem 0.6rem; min-height: 48px; }
+.modal li button:hover { background: var(--violet-soft); }
+.modal .n { font-weight: 700; color: var(--violet); font-variant-numeric: tabular-nums; }
+.modal .t { font-weight: 600; }
+.modal .d { grid-column: 2; font-size: 0.85rem; color: var(--ink-soft); }
+.icon-btn { background: none; border: 0; width: 40px; height: 40px; border-radius: 10px; font-size: 1.4rem; line-height: 1; color: var(--ink-soft); }
+.icon-btn:hover { background: var(--paper); color: var(--ink); }
+
+/* ---------- guided tour ---------- */
+.tour { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 20; width: min(860px, calc(100% - 1.5rem));
+  background: var(--violet); color: #fff; border-radius: 16px; padding: 0.9rem 1rem 0.9rem 1.15rem; box-shadow: 0 18px 40px -16px rgba(51,41,127,.7);
+  display: grid; grid-template-columns: 1fr auto; gap: 0.4rem 1rem; align-items: center; }
+.tour .step-no { font-size: 0.8rem; font-weight: 700; color: #D4CEFB; }
+.tour .say { font-weight: 500; font-size: 1.02rem; }
+.tour mark { background: #FFE27A; color: var(--ink); font-weight: 700; padding: 0.05rem 0.3rem; border-radius: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.tour .task { font-size: 0.9rem; color: #E7E3FD; margin-top: 0.15rem; }
+.tour .task b { color: #fff; }
+.tour .nav { display: flex; gap: 0.45rem; align-items: center; }
+.tour .btn { min-height: 40px; padding: 0.45rem 0.9rem; border-color: rgba(255,255,255,.35); background: transparent; color: #fff; }
+.tour .btn:hover { border-color: #fff; }
+.tour .btn.go { background: #fff; color: var(--violet); border-color: #fff; }
+.tour .btn:disabled { opacity: .5; cursor: default; }
+.tour .end { background: none; border: 0; color: #D4CEFB; font-size: 0.85rem; text-decoration: underline; padding: 0.2rem; }
+body.touring .workspace { padding-bottom: 9rem; }
+.tour-intro { padding: 0 1.25rem 0.8rem; }
+.tour-intro .btn { width: 100%; margin-top: 0.6rem; }
+.or-pick { padding: 0.3rem 1.25rem 0; font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); }
+
+/* ---------- history + rules ---------- */
+.page { max-width: 1120px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.page h1 { font-size: 1.6rem; font-weight: 800; }
+.page .lede { color: var(--ink-soft); margin: 0.3rem 0 1.4rem; max-width: 70ch; }
+.counts { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+.count { flex: 1 1 160px; background: var(--white); border-radius: 12px; padding: 0.85rem 1rem; border: 1px solid var(--line-faint); }
+.count .lbl { display: flex; align-items: center; gap: 0.45rem; font-size: 0.86rem; color: var(--ink-soft); font-weight: 500; }
+.count .lbl::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--ink); }
+.count.APPROVE .lbl::before { background: var(--pass); } .count.HOLD .lbl::before { background: var(--hold); } .count.REJECT .lbl::before { background: var(--reject); } .count.SAVED .lbl::before { background: var(--violet); }
+.count b { display: block; font-size: 1.45rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 0.15rem; }
+.count small { font-size: 0.84rem; color: var(--ink-soft); }
+.bar-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.filters { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.filters button { border: 1.5px solid var(--line); background: var(--white); border-radius: 99px; padding: 0.3rem 0.95rem; font-size: 0.9rem; font-weight: 500; min-height: 36px; }
+.filters button[aria-pressed="true"] { background: var(--violet); color: #fff; border-color: var(--violet); }
+.table-wrap { background: var(--white); border-radius: var(--radius); border: 1px solid var(--line-faint); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+th, td { text-align: left; padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--line-faint); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; font-size: 0.84rem; color: var(--ink-soft); background: #FAFCF9; }
+td.r, th.r { text-align: right; }
+tr.click { cursor: pointer; } tr.click:hover { background: #FAFAFF; }
+.tag { display: inline-block; font-size: 0.8rem; font-weight: 700; padding: 0.12rem 0.6rem; border-radius: 99px; white-space: nowrap; }
+.tag.APPROVE { background: var(--pass-bg); color: var(--pass); } .tag.HOLD { background: var(--hold-bg); color: var(--hold); } .tag.REJECT { background: var(--reject-bg); color: var(--reject); }
+.tag.SAVED { background: var(--violet-soft); color: var(--violet); }
+.tabs { display: flex; gap: 1.4rem; border-bottom: 1px solid var(--line); margin: 0.4rem 0 1.1rem; }
+.tabs button { background: none; border: 0; padding: 0.55rem 0; font-weight: 600; color: var(--ink-soft); position: relative; font-size: 0.98rem; }
+.tabs button[aria-selected="true"] { color: var(--ink); }
+.tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--violet); }
+.log-tools { display: flex; gap: 0.6rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+.log-tools input { flex: 1 1 18rem; min-height: 42px; border: 1.5px solid var(--line); border-radius: 10px; padding: 0 0.85rem; font: inherit; background: var(--white); }
+.log-tools input:focus { outline: 2px solid var(--violet); border-color: transparent; }
+.log-match { margin: -0.2rem 0 0.9rem; font-weight: 500; }
+.day-h { font-size: 0.8rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); margin: 1.1rem 0 0.45rem; }
+.day-h:first-child { margin-top: 0; }
+.log { list-style: none; margin: 0; padding: 0; background: var(--white); border: 1px solid var(--line-faint); border-radius: var(--radius); }
+.log > li + li { border-top: 1px solid var(--line-faint); }
+.log summary { display: grid; grid-template-columns: 0.7rem 4.6rem 1fr auto; gap: 0.2rem 0.8rem; align-items: start; padding: 0.8rem 1rem; cursor: pointer; list-style: none; }
+.log summary::-webkit-details-marker { display: none; }
+.log summary:hover { background: #FAFAFC; }
+.log .time { font-size: 0.88rem; color: var(--ink-soft); padding-top: 0.05rem; }
+.log .line b { font-weight: 700; } .log .line .sub { display: block; font-size: 0.88rem; color: var(--ink-soft); margin-top: 0.1rem; }
+.log .amt { font-weight: 600; }
+.pin { width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-top: 0.4rem; background: #9AA6B1; }
+.pin.APPROVE { background: var(--pass); } .pin.HOLD { background: var(--hold); } .pin.REJECT { background: var(--reject); } .pin.SAVED { background: var(--violet); } .pin.DEL { background: #9AA6B1; }
+.entry { padding: 0.2rem 1rem 1.2rem 2.5rem; display: grid; gap: 1rem; font-size: 0.95rem; }
+.entry h4 { margin: 0 0 0.35rem; font-size: 0.95rem; font-weight: 700; }
+.entry ul { margin: 0; padding-left: 1.1rem; } .entry li { margin: 0.2rem 0; }
+.tl { list-style: none; margin: 0; padding: 0 0 0 0.2rem; }
+.tl li { display: grid; grid-template-columns: 0.7rem 1fr; gap: 0 0.75rem; position: relative; padding-bottom: 0.8rem; }
+.tl li:not(:last-child)::before { content: ""; position: absolute; left: calc(0.35rem - 1px); top: 1.1rem; bottom: 0; width: 2px; background: var(--line); }
+.tl .pin { margin-top: 0.35rem; }
+.tl .when { display: block; font-size: 0.82rem; color: var(--ink-soft); }
+.rules-used { list-style: none; padding: 0 !important; }
+.rules-used li { padding: 0.45rem 0.7rem; background: #F6F5FD; border-radius: 8px; margin: 0 0 0.35rem !important; }
+.proof { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0; }
+.proof dt { font-weight: 600; } .proof dd { margin: 0; overflow-wrap: anywhere; }
+.proof .hint { display: block; font-size: 0.85rem; color: var(--ink-soft); }
+.ck { display: grid; grid-template-columns: 1.1rem 10rem 1fr; gap: 0.25rem 0.5rem; }
+.ck .s-pass { color: var(--pass); } .ck .s-hold, .ck .s-warn { color: var(--hold); } .ck .s-reject { color: var(--reject); } .ck .s-skipped { color: #9AA6B1; }
+.ck .sum { color: var(--ink-soft); }
+@media (max-width: 760px) {
+  .log summary { grid-template-columns: 0.7rem 1fr auto; }
+  .log .time { grid-column: 2; grid-row: 2; }
+  .entry { padding-left: 1rem; }
+  .ck { grid-template-columns: 1.1rem 1fr; } .ck .sum { grid-column: 2; }
+  .proof { grid-template-columns: 1fr; } .proof dd { margin-bottom: 0.4rem; }
+}
+.seen { margin-top: 0.8rem; font-size: 0.88rem; color: var(--ink-soft); }
+@media (max-width: 760px) {
+  .log summary { grid-template-columns: 1fr auto; }
+  .log summary .when { grid-column: 1 / -1; font-size: 0.82rem; color: var(--ink-soft); order: -1; }
+  .log summary .amt { display: none; }
+  .log .ck { grid-template-columns: 1.1rem 1fr; } .log .ck .sum { grid-column: 2; color: var(--ink-soft); }
+}
+.empty-state { padding: 2.75rem 1rem; text-align: center; color: var(--ink-soft); background: var(--white); border: 2px dashed var(--line); border-radius: var(--radius); }
+.cards { display: none; }
+
+.drawer { position: fixed; inset: 0; z-index: 25; background: rgba(29,43,58,.45); display: flex; justify-content: flex-end; }
+.drawer .panel { width: min(860px, 100%); background: var(--paper); overflow-y: auto; padding: 1.4rem 1.5rem 3rem; }
+.drawer .head { display: flex; justify-content: space-between; align-items: start; gap: 1rem; margin-bottom: 1rem; }
+.drawer .two { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 1.25rem; align-items: start; }
+
+.rules { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 0.5rem; }
+.rules section { background: var(--white); border-radius: var(--radius); padding: 1.1rem 1.25rem; border: 1px solid var(--line-faint); border-top: 5px solid var(--hold); }
+.rules section.rej { border-top-color: var(--reject); }
+.rules section.ass { border-top-color: var(--violet); grid-column: 1 / -1; }
+.rules h2 { font-size: 1.05rem; }
+.rules dl { margin: 0; }
+.rules dt { font-weight: 700; margin-top: 0.75rem; }
+.rules dd { margin: 0.1rem 0 0; color: var(--ink-soft); }
+.rules .ass dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1.25rem; }
+.meter { height: 7px; background: var(--line-faint); border-radius: 4px; overflow: hidden; margin-top: 0.3rem; min-width: 90px; }
+.meter i { display: block; height: 100%; background: var(--violet); }
+.meter.over i { background: var(--reject); }
+h2.table-h { font-size: 1.1rem; margin: 2rem 0 0.6rem; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 960px) {
+  /* one column: decision, the invoice, what was read from it, then the checks */
+  .ws-grid { grid-template-columns: 1fr; gap: 0; }
+  .col-main { display: contents; }
+  #result { order: 1; }
+  .paper-col { position: static; order: 2; margin-bottom: 1.5rem; }
+  #read { order: 3; }
+  .panel-card { order: 4; }
+  .paper-col .sheet { max-width: 340px; margin: 0 auto; }
+  .paper-col .sheet-cap { max-width: 340px; margin: 0.55rem auto 0; }
+}
+@media (max-width: 760px) {
+  .brand small, .mode { display: none; }
+  .top { gap: 0.9rem; padding: 0 0.9rem; }
+  nav button { padding: 0 0.55rem; font-size: 0.92rem; }
+  .landing { place-items: start center; padding-top: 2rem; background: repeating-linear-gradient(180deg, transparent 0 31px, var(--line-faint) 31px 32px), var(--paper); }
+  .drop { padding: 2rem 1rem 1.8rem; }
+  .facts { grid-template-columns: 1fr; margin-top: 1.8rem; }
+  .workspace, .page { padding: 1.1rem 0.9rem 3rem; }
+  .ws-head .btn { width: 100%; }
+  .step > button { grid-template-columns: 1.6rem 1fr 1rem; }
+  .step .sum { grid-column: 2; font-size: 0.88rem; }
+  .detail { margin-left: 0; }
+  .progress { margin-left: 2.2rem; }
+  .rules, .rules .ass dl, .drawer .two { grid-template-columns: 1fr; }
+  .table-wrap { display: none; }
+  .cards { display: grid; gap: 0.6rem; }
+  .card { background: var(--white); border: 1px solid var(--line-faint); border-radius: 12px; padding: 0.8rem 0.9rem; text-align: left; width: 100%; display: grid; gap: 0.25rem; }
+  .card .row { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; }
+  .hide-sm { display: none; }
+  .modal { align-items: flex-end; padding: 0; }
+  .tour { grid-template-columns: 1fr; bottom: 0; width: 100%; border-radius: 16px 16px 0 0; padding-bottom: calc(0.9rem + env(safe-area-inset-bottom)); }
+  .tour .nav { justify-content: space-between; }
+  .modal .box { border-radius: 18px 18px 0 0; max-height: 88vh; width: 100%; }
+}
+@media (max-width: 520px) { .brand .bt { display: none; } }
+@media (prefers-reduced-motion: reduce) { .stamp.land { animation: none; } .step[data-s="running"] .i { animation-duration: 3s; } .drop { transition: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter></svg>
+
+<header class="top">
+  <div class="arrows">
+    <button id="nav-back" aria-label="Back" title="Back" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
+    <button id="nav-fwd" aria-label="Forward" title="Forward" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
+  </div>
+  <button class="brand" id="home" title="Upload page"><svg class="logo" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6h-4z"/><path d="M5 13h14v4H5z"/><path d="M7 21h10"/><path d="M10 9v4M14 9v4"/></svg><span class="bt">BillClerk</span> <small>for RJ Garments</small></button>
+  <nav aria-label="Pages">
+    <button data-view="check" aria-current="page">Check</button>
+    <button data-view="history">History</button>
+    <button data-view="rules">Rules</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="mode" id="mode"></span>
+</header>
+
+<!-- CHECK -->
+<main id="view-check">
+  <section class="landing" id="landing">
+    <div class="hero">
+      <h1>Check an invoice before you pay it</h1>
+      <p>Upload a supplier invoice and get a <mark>clear answer, with the reason</mark>.</p>
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png" aria-label="Upload an invoice">
+        <span class="icon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="M9.5 13.5 12 11l2.5 2.5"/></svg></span>
+        <b>Upload an invoice</b>
+        <span class="only-mouse">Drag a PDF, scan or photo here, or click to choose one</span>
+        <span class="only-touch">PDF, scan or photo from your phone</span>
+        <span class="btn primary fake-btn" aria-hidden="true">Choose a file</span>
+      </label>
+      <div class="hero-more">
+        <label class="btn camera only-touch">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Take a photo<input type="file" id="camera" accept="image/*" capture="environment" aria-label="Take a photo of an invoice">
+        </label>
+        <button class="link" id="open-samples">New here? Take the guided tour</button>
+      </div>
+      <p class="upload-err" id="upload-err" role="alert" hidden></p>
+      <p class="upload-ok" id="upload-ok" role="status" hidden></p>
+      <ul class="facts">
+        <li><b><span class="dot" style="background:var(--violet)"></span>Reads anything</b>PDFs, scans, <mark>photos</mark>, even handwriting.</li>
+        <li><b><span class="dot" style="background:var(--hold)"></span>Catches problems</b><mark>Duplicates</mark>, over-billing, wrong GST, bank changes.</li>
+        <li><b><span class="dot" style="background:var(--pass)"></span>You stay in charge</b>Nothing is kept <mark>until you say so</mark>. Unsaved uploads are deleted after 24 hours.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="workspace" id="workspace" hidden aria-live="polite">
+    <div class="ws-head">
+      <div><h1 id="title"></h1><p id="subtitle"></p></div>
+      <button class="btn primary" id="another">Check another invoice</button>
+    </div>
+    <div class="ws-grid">
+      <div class="col-main">
+        <div id="result"></div>
+        <div id="read"></div>
+        <div class="panel-card"><h3>Checks <span>Tap a check for details</span></h3><ol id="steps" class="steps"></ol></div>
+      </div>
+      <div class="paper-col">
+        <div class="sheet" id="sheet"></div>
+        <div class="sheet-cap"><span id="sheet-name" class="hide-sm"></span><a id="sheet-open" target="_blank" rel="noopener">Open original</a></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="samples-modal" hidden role="dialog" aria-modal="true" aria-labelledby="samples-title">
+  <div class="box">
+    <div class="box-head"><div><h2 id="samples-title">Guided tour</h2><p>12 invoices, <mark>one problem each</mark>. About 3 minutes.</p></div>
+      <button class="icon-btn" id="close-samples" aria-label="Close">×</button></div>
+    <div class="tour-intro"><button class="btn primary" id="start-tour">Start the tour</button>
+      <p class="muted small" style="margin-top:0.45rem">Clears your history first.</p></div>
+    <p class="or-pick">Or try one example</p>
+    <ol id="samples"></ol>
+  </div>
+</div>
+
+<div class="tour" id="tour" hidden role="region" aria-label="Guided tour">
+  <div><div class="step-no" id="tour-no"></div><div class="say" id="tour-say"></div><div class="task" id="tour-task" hidden></div></div>
+  <div class="nav"><button class="end" id="tour-end">End tour</button><button class="btn" id="tour-back">Back</button><button class="btn go" id="tour-next">Next</button></div>
+</div>
+
+<!-- HISTORY -->
+<main id="view-history" class="page" hidden>
+  <h1>History</h1>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-checks" aria-selected="true">Checks</button>
+    <button role="tab" id="tab-log" aria-selected="false">Audit trail</button>
+  </div>
+  <section id="pane-checks">
+    <p class="lede">Every invoice you've checked. Saved ones are your records: new invoices are checked against them.</p>
+    <div class="counts" id="counts"></div>
+    <div class="bar-row">
+      <div class="filters" id="filters" role="group" aria-label="Show"></div>
+      <button class="btn" id="clear">Clear history</button>
+    </div>
+    <div id="table"></div>
+  </section>
+  <section id="pane-log" hidden>
+    <p class="lede">A permanent record of <mark>every decision and why</mark>. It stays even after a file is deleted or history is cleared, so you can always answer "why was this rejected?"</p>
+    <div class="log-tools">
+      <input type="search" id="log-q" placeholder="Search by invoice number, vendor or file name" aria-label="Search the audit trail">
+      <label class="btn" title="Pick the file someone is asking about. We only compare it, we don't keep it.">Find by file<input type="file" id="log-file" accept=".pdf,.jpg,.jpeg,.png" hidden></label>
+    </div>
+    <p class="log-match" id="log-match" hidden></p>
+    <div id="log"></div>
+  </section>
+</main>
+
+<div class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="dr-title"><div class="panel" id="panel"></div></div>
+
+<!-- RULES -->
+<main id="view-rules" class="page" hidden>
+  <h1>How decisions are made</h1>
+  <p class="lede">The AI only reads the invoice. Every decision comes from one of these rules, so the same invoice always gets the same answer, with its reason.</p>
+  <div class="rules" id="rules"></div>
+  <h2 class="table-h">Purchase orders</h2>
+  <p class="muted small" style="margin:-0.3rem 0 0.6rem">Billed so far counts approved invoices that were saved to records.</p>
+  <div class="table-wrap" id="po-table" style="display:block;overflow-x:auto"></div>
+  <h2 class="table-h">Vendors</h2>
+  <div class="table-wrap" id="vendor-table" style="display:block;overflow-x:auto"></div>
+</main>
+
+<script>
+const STEPS = [["ingest","Receive"],["extract","Read"],["validate","Document"],["vendor","Vendor"],["gst","GST"],["po","Purchase order"],["duplicate","Duplicates"],["match","Match the order"]];
+const WORD = { APPROVE: "Passed for payment", HOLD: "On hold", REJECT: "Rejected" };
+const BADGE = { APPROVE: "✓", HOLD: "!", REJECT: "✕" };
+const STAMP = { APPROVE: "PASSED FOR PAYMENT", HOLD: "ON HOLD", REJECT: "REJECTED" };
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hl = s => esc(s).replace(/\*(.+?)\*/g, "<mark>$1</mark>");  // *word* -> highlighted
+const inr = x => x == null ? "" : "₹" + Number(x).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const api = async (url, opts) => { const r = await fetch(url, opts); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || "Something went wrong."); return j; };
+let samples = [], running = false, lastResult = null;
+const isUpload = f => !!f && !samples.some(s => s.file === f);
+function flash(msg) { const n = $("#upload-ok"); n.textContent = msg; n.hidden = false; setTimeout(() => n.hidden = true, 5000); }
+
+/* pages */
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => { if (running) return; show(b.dataset.view); });
+
+/* back / forward: every screen you visit is remembered, like browser tabs */
+const trail = []; let at = -1;
+function remember(entry) {
+  if (entry.screen !== "result" && trail[at]?.screen === entry.screen) return entry;  // already here
+  trail.length = at + 1; trail.push(entry); at = trail.length - 1;
+  history.pushState({ at }, ""); arrows();
+  return entry;
+}
+function arrows() { $("#nav-back").disabled = running || at <= 0; $("#nav-fwd").disabled = running || at >= trail.length - 1; }
+function revisit(e) {
+  endTour(); closeDrawer(); closeSamples();
+  if (e.screen === "home") { showView("check"); goHome(); }
+  else if (e.screen === "result" && e.d) { showView("check"); showResult(e); }
+  else if (e.screen === "result") { showView("check"); goHome(); }
+  else showView(e.screen);
+}
+window.addEventListener("popstate", ev => {
+  const i = ev.state?.at;
+  if (i == null || !trail[i]) return;
+  if (running) { history.go(at - i); return; }  // finish the check first
+  at = i; revisit(trail[at]); arrows();
+});
+$("#nav-back").onclick = () => history.back();
+$("#nav-fwd").onclick = () => history.forward();
+$("#home").onclick = () => { if (running) return; endTour(); closeDrawer(); showView("check"); goHome(); remember({ screen: "home" }); };
+function goHome() { $("#workspace").hidden = true; $("#landing").hidden = false; window.scrollTo(0, 0); }
+function show(v) { showView(v); remember(v === "check" && !$("#workspace").hidden && lastEntry() ? { ...lastEntry() } : { screen: v === "check" ? "home" : v }); }
+const lastEntry = () => [...trail].reverse().find(e => e.screen === "result" && e.d);
+function showView(v) {
+  document.querySelectorAll("nav button").forEach(b => b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  for (const id of ["check", "history", "rules"]) $("#view-" + id).hidden = id !== v;
+  if (v !== "check" && tourAt >= 0) endTour();
+  if (v === "history") loadHistory();
+  if (v === "rules") loadRules();
+  window.scrollTo(0, 0);
+}
+$("#another").onclick = () => { if (running) return; endTour(); goHome(); remember({ screen: "home" }); };
+
+/* upload */
+const drop = $("#drop");
+$("#file").onchange = e => e.target.files[0] && upload(e.target.files[0], e.target);
+$("#camera").onchange = e => e.target.files[0] && upload(e.target.files[0], e.target);
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]));
+async function upload(f, input) {
+  if (running) return;
+  const err = $("#upload-err"); err.hidden = true;
+  const fd = new FormData(); fd.append("file", f);
+  try { const j = await api("/api/upload", { method: "POST", body: fd }); if (input) input.value = ""; check(j.file, f.name, "Uploaded just now"); }
+  catch (e) { err.textContent = e.message; err.hidden = false; }
+}
+
+/* samples */
+async function loadSamples() {
+  samples = await api("/api/samples");
+  $("#samples").innerHTML = samples.map(s => `<li><button data-file="${esc(s.file)}"><span class="n">${esc(s.id)}</span><span class="t">${esc(s.title)}</span><span class="d">${hl(s.blurb)}</span></button></li>`).join("");
+  $("#samples").querySelectorAll("button").forEach(b => b.onclick = () => {
+    const s = samples.find(x => x.file === b.dataset.file); closeSamples(); endTour(); check(s.file, `${s.id}. ${s.title}`, s.blurb);
+  });
+}
+const openSamples = () => { $("#samples-modal").hidden = false; $("#close-samples").focus(); };
+const closeSamples = () => { $("#samples-modal").hidden = true; };
+$("#open-samples").onclick = openSamples;
+$("#close-samples").onclick = closeSamples;
+$("#samples-modal").addEventListener("click", e => e.target.id === "samples-modal" && closeSamples());
+
+/* a live check */
+function stepRows() {
+  return STEPS.map(([k, n]) => `<li class="step" data-key="${k}" data-s="waiting">
+    <button disabled aria-expanded="false"><span class="i" aria-hidden="true"></span><span class="name">${n}</span><span class="sum"></span><span class="chev" aria-hidden="true"></span></button>
+    <div class="progress" hidden></div><ul class="detail" hidden></ul></li>`).join("");
+}
+const stepEl = (root, k) => root.querySelector(`.step[data-key="${k}"]`);
+function setPreview(file, sheet) {
+  sheet.classList.remove("nopreview");
+  sheet.innerHTML = `<img alt="The invoice" src="/api/preview/${encodeURIComponent(file)}">`;
+  sheet.querySelector("img").onerror = () => {
+    sheet.classList.add("nopreview");
+    sheet.querySelector("img").outerHTML = `<div class="np"><svg width="38" height="46" viewBox="0 0 38 46" aria-hidden="true"><path d="M3 3h22l10 10v30H3z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M25 3v10h10M12 25l14 12M26 25L12 37" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><span>Can't show this file</span></div>`;
+  };
+}
+let current = null;
+function check(file, title, sub) {
+  running = true;
+  current = remember({ screen: "result", file, title, sub, d: null });
+  $("#landing").hidden = true; $("#workspace").hidden = false; window.scrollTo(0, 0);
+  $("#title").textContent = title; $("#subtitle").innerHTML = hl(sub);
+  $("#result").innerHTML = `<div class="checking">Checking the invoice…</div>`; $("#read").innerHTML = "";
+  $("#steps").innerHTML = stepRows(); setPreview(file, $("#sheet"));
+  $("#sheet-name").textContent = file; $("#sheet-open").href = `/api/file/${encodeURIComponent(file)}`;
+  stepEl($("#steps"), "ingest").dataset.s = "running";
+  const queue = [], gap = reduced ? 0 : 200; let busy = false, finished = false;
+  const es = new EventSource(`/api/run/${encodeURIComponent(file)}`);
+  const pump = () => { if (busy || !queue.length) return; busy = true; const [k, d] = queue.shift(); handle(k, d); setTimeout(() => { busy = false; pump(); }, k === "stage" ? gap : 0); };
+  for (const k of ["stage", "progress", "result", "error"]) es.addEventListener(k, e => { queue.push([k, JSON.parse(e.data)]); pump(); if (k === "result" || k === "error") { finished = true; es.close(); } });
+  es.onerror = () => { if (!finished) { es.close(); queue.push(["error", { message: "Lost the connection to the server. Check it's still running, then try again." }]); pump(); } };
+}
+function showResult(e) {
+  const d = e.d; lastResult = d;
+  $("#landing").hidden = true; $("#workspace").hidden = false; window.scrollTo(0, 0);
+  $("#title").textContent = e.title; $("#subtitle").innerHTML = hl(e.sub);
+  const root = $("#steps"); root.innerHTML = stepRows();
+  d.stages.forEach(st => { const li = stepEl(root, st.key); if (li) fillStep(li, st); });
+  markUnchecked(root);
+  renderResult($("#result"), d, false); renderRead($("#read"), d);
+  setPreview(e.file, $("#sheet")); stamp($("#sheet"), d.decision, false);
+  $("#sheet-name").textContent = e.file; $("#sheet-open").href = `/api/file/${encodeURIComponent(e.file)}`;
+}
+function fillStep(li, st) {
+  li.dataset.s = st.status;
+  $(".sum", li).textContent = st.summary;
+  $(".progress", li).hidden = true;
+  const ul = $(".detail", li), btn = $("button", li);
+  ul.innerHTML = (st.checks || []).map(c => `<li><span class="${c.ok === true ? "ok-t" : c.ok === false ? "ok-f" : "ok-n"}" aria-label="${c.ok === true ? "passed" : c.ok === false ? "failed" : "note"}">${c.ok === true ? "✓" : c.ok === false ? "✕" : "·"}</span><span>${esc(c.label)}</span>${c.detail ? `<span class="d">${esc(c.detail)}</span>` : ""}</li>`).join("");
+  if (st.checks && st.checks.length) {
+    btn.disabled = false; $(".chev", li).textContent = "›";
+    btn.onclick = () => { ul.hidden = !ul.hidden; btn.setAttribute("aria-expanded", !ul.hidden); };
+  }
+}
+function markUnchecked(root) {
+  // checks that never ran (an early problem stopped the run) collapse into one quiet line
+  const left = [...root.querySelectorAll(".step")].filter(li => ["waiting", "running"].includes(li.dataset.s));
+  left.forEach(li => li.hidden = true);
+  root.querySelector(".skipnote")?.remove();
+  if (left.length) root.insertAdjacentHTML("beforeend", `<li class="skipnote">${left.length} more check${left.length > 1 ? "s" : ""} skipped, nothing to check until this is fixed.</li>`);
+}
+function handle(kind, d) {
+  const root = $("#steps");
+  if (kind === "progress") { const li = stepEl(root, "extract"); li.dataset.s = "running"; const p = $(".progress", li); p.hidden = false; p.textContent = d.message; return; }
+  if (kind === "stage") {
+    const li = stepEl(root, d.key); if (!li) return;
+    fillStep(li, d);
+    const i = STEPS.findIndex(s => s[0] === d.key);
+    if (i >= 0 && i + 1 < STEPS.length) stepEl(root, STEPS[i + 1][0]).dataset.s = "running";
+    return;
+  }
+  if (kind === "result") { markUnchecked(root); lastResult = d; if (current) current.d = d; renderResult($("#result"), d, false); renderRead($("#read"), d); stamp($("#sheet"), d.decision, true); running = false; arrows(); renderTour(); return; }
+  if (kind === "error") {
+    root.querySelectorAll('.step[data-s="running"]').forEach(li => li.dataset.s = "waiting");
+    running = false; arrows(); renderTour();
+    $("#result").innerHTML = `<div class="result REJECT"><div class="band"><span class="badge">✕</span><div><div class="word">Couldn't check this</div><h2>${esc(d.message)}</h2></div></div></div>`;
+  }
+}
+function stamp(sheet, decision, animate) {
+  sheet.querySelector(".stamp")?.remove();
+  const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+  sheet.insertAdjacentHTML("beforeend", `<div class="stamp ${decision}${animate ? " land" : ""}" role="img" aria-label="${WORD[decision]}"><div class="big">${STAMP[decision]}</div><div class="line">ACCOUNTS PAYABLE ${today}</div></div>`);
+}
+
+/* the result card */
+/* vendor initials in a coloured circle, same colour every time for the same vendor */
+function avatar(name, small) {
+  const words = (name || "?").replace(/\b(pvt|ltd|llp|private|limited|&)\b\.?/gi, "").trim().split(/\s+/);
+  const init = ((words[0]?.[0] || "?") + (words[1]?.[0] || "")).toUpperCase();
+  const hues = [250, 160, 200, 25, 330, 95, 285, 190];
+  const h = hues[[...(name || "")].reduce((a, c) => a + c.charCodeAt(0), 0) % hues.length];
+  return `<span class="avatar${small ? " sm" : ""}" style="background:hsl(${h} 45% 42%)" aria-hidden="true">${esc(init)}</span>`;
+}
+/* the invoice as BillClerk read it: who, which invoice, which order, what for, how much */
+function renderRead(el, d) {
+  const f = d.stages.find(s => s.key === "extract")?.data?.fields;
+  if (!f || !d.invoice?.total) { el.innerHTML = ""; return; }
+  const inv = d.invoice, name = d.vendor?.name || f.vendor_name || "Unknown vendor";
+  const lines = f.line_items || [];
+  const gst = f.igst ? [["IGST", f.igst]] : [["CGST", f.cgst], ["SGST", f.sgst]].filter(x => x[1]);
+  const date = inv.date && inv.date !== "None" ? new Date(inv.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : (f.invoice_date || "–");
+  el.innerHTML = `<section class="read" aria-label="What was read from the invoice">
+    <div class="read-head">${avatar(name)}<div><b>${esc(name)}</b><span>GSTIN ${esc(f.vendor_gstin || "not printed")}</span></div></div>
+    <dl class="read-facts">
+      <div><dt>Invoice</dt><dd>${esc(inv.number || "–")}</dd></div>
+      <div><dt>Date</dt><dd>${esc(date)}</dd></div>
+      <div><dt>Order</dt><dd>${esc(inv.po || "None")}${inv.po_inferred ? `<span class="pill">worked out</span>` : ""}</dd></div>
+    </dl>
+    ${lines.length ? `<table class="read-lines"><tbody>${lines.slice(0, 5).map(li => `<tr><td>${esc(li.description)}</td>
+      <td class="q">${li.qty && li.unit_price ? `${li.qty} × ${inr(li.unit_price)}` : ""}</td><td class="r">${inr(li.taxable_value)}</td></tr>`).join("")}
+      ${lines.length > 5 ? `<tr><td class="muted" colspan="3">and ${lines.length - 5} more</td></tr>` : ""}</tbody></table>` : ""}
+    <div class="read-sum"><span>Before GST</span><b>${inr(inv.taxable)}</b>
+      ${gst.map(([k, v]) => `<span>${k}</span><b>${inr(v)}</b>`).join("")}
+      <span class="total">Total</span><b class="total">${inr(inv.total)}</b></div>
+  </section>`;
+}
+function renderResult(el, d, inDrawer) {
+  const blocking = d.flags.filter(f => f.severity === "HOLD" || f.severity === "REJECT");
+  const also = [...new Set(blocking.map(f => f.short))].filter(x => x !== d.headline);
+  const next = d.next_actions[0];
+  const canSave = d.decision !== "REJECT";
+  const mailLabel = n => `Draft email${n > 1 ? "s" : ""}`;
+  const seen = (d.seen_before || [])[0];
+  el.innerHTML = `<div class="result ${d.decision}">
+    <div class="band"><span class="badge" aria-hidden="true">${BADGE[d.decision]}</span><div>
+      <div class="word">${WORD[d.decision]}</div><h2>${esc(d.headline)}</h2>
+      ${also.length ? `<ul class="also">${also.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
+      ${next ? `<p class="next">→ ${esc(next)}</p>` : ""}</div></div>
+    <div class="body">
+      <div class="actions">
+        ${canSave ? `<span data-save></span>` : ""}
+        ${d.emails.length ? `<button class="btn" data-mail>${mailLabel(d.emails.length)}</button>` : ""}
+        <span class="quiet">
+          ${seen ? `<button class="link" data-seen="${esc(seen.run_id)}" title="This exact file was checked on ${esc(fmtWhen(seen.decided_at))}: ${esc(WORD[seen.decision].toLowerCase())}">Checked before</button>` : ""}
+          ${isUpload(d.file) ? `<button class="link danger" data-del>Delete file</button>` : ""}
+        </span>
+      </div>
+      <div class="err" data-err hidden></div>
+      <div class="emails" data-emails hidden>${d.emails.map((m, i) => `<div class="email"><div class="sub">${esc(m.subject)}</div>
+        <div class="to">To ${m.audience === "vendor" ? "the vendor" : "our AP team"}: ${esc(m.to)}. Draft only, not sent.</div>
+        <pre>${esc(m.body)}</pre><button class="btn" data-copy="${i}">Copy</button></div>`).join("")}</div>
+    </div></div>`;
+  const slot = el.querySelector("[data-save]");
+  const renderSave = () => {
+    if (!slot) return;
+    slot.innerHTML = d.saved
+      ? `<span class="saved-note">✓ Saved to records</span> <button class="link" data-undo>Undo</button>`
+      : `<button class="btn primary" data-do-save title="A later copy will be caught as a duplicate${d.decision === "APPROVE" ? ", and the amount counts against the order" : ""}">Save to records</button>`;
+    const del = el.querySelector("[data-del]"); if (del) del.hidden = !!d.saved;  // records keep their file
+    slot.querySelector("[data-do-save]")?.addEventListener("click", () => toggleSave(true));
+    slot.querySelector("[data-undo]")?.addEventListener("click", () => toggleSave(false));
+  };
+  const toggleSave = async on => {
+    const err = el.querySelector("[data-err]"); err.hidden = true;
+    try { await api(`/api/runs/${encodeURIComponent(d.run_id)}/${on ? "save" : "unsave"}`, { method: "POST" }); d.saved = on; renderSave(); if (inDrawer) loadHistory(); renderTour(); }
+    catch (e) { err.textContent = e.message; err.hidden = false; }
+  };
+  renderSave();
+  el.querySelector("[data-seen]")?.addEventListener("click", e => { closeDrawer(); openLog(e.target.dataset.seen); });
+  el.querySelector("[data-del]")?.addEventListener("click", async e => {
+    const b = e.target, err = el.querySelector("[data-err]"); err.hidden = true;
+    if (!b.dataset.armed) {  // two clicks, no pop-up
+      b.dataset.armed = "1"; b.textContent = "Click again to delete the file and its reading";
+      setTimeout(() => { delete b.dataset.armed; b.textContent = "Delete this file"; }, 4000);
+      return;
+    }
+    try {
+      await api(`/api/runs/${encodeURIComponent(d.run_id)}`, { method: "DELETE" });
+      trail.forEach(t => { if (t.file === d.file) t.d = null; });  // back/forward won't reopen it
+      if (inDrawer) { closeDrawer(); loadHistory(); }
+      else { goHome(); remember({ screen: "home" }); flash("✓ File deleted, along with its preview and reading."); }
+    } catch (x) { err.textContent = x.message; err.hidden = false; }
+  });
+  el.querySelector("[data-mail]")?.addEventListener("click", e => { const box = el.querySelector("[data-emails]"); box.hidden = !box.hidden; e.target.textContent = box.hidden ? mailLabel(d.emails.length) : "Hide draft"; });
+  el.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+    const m = d.emails[+b.dataset.copy];
+    try { await navigator.clipboard.writeText(`Subject: ${m.subject}\n\n${m.body}`); b.textContent = "Copied"; } catch { b.textContent = "Couldn't copy: select the text instead"; }
+  });
+}
+
+/* history */
+let filter = "all";
+/* decision log */
+const tab = which => {
+  $("#tab-checks").setAttribute("aria-selected", which === "checks"); $("#tab-log").setAttribute("aria-selected", which === "log");
+  $("#pane-checks").hidden = which !== "checks"; $("#pane-log").hidden = which !== "log";
+  if (which === "log") loadLog();
+};
+$("#tab-checks").onclick = () => tab("checks");
+$("#tab-log").onclick = () => tab("log");
+let logTimer;
+$("#log-q").oninput = () => { clearTimeout(logTimer); $("#log-match").hidden = true; logTimer = setTimeout(loadLog, 250); };
+$("#log-file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; e.target.value = "";
+  const fd = new FormData(); fd.append("file", f);
+  const j = await api("/api/log/match", { method: "POST", body: fd });
+  const m = $("#log-match"); m.hidden = false; $("#log-q").value = "";
+  m.innerHTML = j.matches.length
+    ? `<mark>${esc(f.name)}</mark> was checked ${j.matches.length === 1 ? "once" : j.matches.length + " times"}. Opened below.`
+    : `No decision was ever made on <mark>${esc(f.name)}</mark>. If it's been edited or re-exported since, it won't match: search by invoice number instead.`;
+  renderLog(j.matches, true);
+};
+const fmtWhen = t => t ? new Date(t.replace(" ", "T")).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+async function loadLog(open) {
+  const rows = await api("/api/log?q=" + encodeURIComponent($("#log-q").value));
+  renderLog(rows, false, open);
+}
+const plainName = f => (f || "").replace(/^\d{8}-\d{6}(-[0-9a-f]{4})?_/, "");
+const VERB = WORD;  // same words as the result card
+const kb = n => n == null ? "" : n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1048576).toFixed(1)} MB`;
+const timeOf = t => new Date(t.replace(" ", "T")).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+const dayOf = t => { const d = new Date(t.replace(" ", "T")), today = new Date(), y = new Date(Date.now() - 864e5);
+  return d.toDateString() === today.toDateString() ? "Today" : d.toDateString() === y.toDateString() ? "Yesterday" : d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }); };
+function sameIdea(a, b) {  // don't repeat the headline as a reason
+  const w = x => new Set(x.toLowerCase().replace(/[^a-z0-9₹ ]/g, " ").split(/\s+/).filter(y => y.length > 2));
+  const A = w(a), B = w(b); let n = 0; A.forEach(x => B.has(x) && n++);
+  return n / Math.max(1, Math.min(A.size, B.size)) > 0.7;
+}
+function events(r) {  // what happened to this file, in order
+  const ev = [{ t: r.decided_at, pin: r.decision, html: `<b>${VERB[r.decision]}.</b> ${esc(r.headline)}` }];
+  if (r.saved_at) ev.push({ t: r.saved_at, pin: "SAVED", html: `<b>Added to records.</b> New invoices are now checked against it.` });
+  if (r.file_deleted_at) ev.push({ t: r.file_deleted_at, pin: "DEL", html: `<b>File deleted.</b> This record of the decision is kept.` });
+  return ev;
+}
+const tlHtml = ev => `<ol class="tl">${ev.sort((a, b) => a.t.replace("T", " ").localeCompare(b.t.replace("T", " "))).map(e => `<li><span class="pin ${e.pin}"></span><div>${e.html}<span class="when">${esc(fmtWhen(e.t))}</span></div></li>`).join("")}</ol>`;
+function entryHtml(r) {
+  const rules = r.rules || {}, tol = rules.tolerance || {};
+  const why = r.reasons.filter(x => x !== "All checks passed." && !sameIdea(x, r.headline));
+  const sym = { pass: "✓", warn: "!", hold: "!", reject: "✕", skipped: "–" };
+  const fp = r.file_sha256 || "";
+  return `<div class="entry">
+    <div><h4>What happened</h4>${tlHtml(events(r))}</div>
+    ${why.length ? `<div><h4>Why</h4><ul>${why.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    <div><h4>What to do next</h4><ul>${r.next_actions.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+    <div><h4>What we checked</h4><div class="ck">${r.checks.filter(c => c.name !== "Decide").map(c => `<span class="s-${c.status}" aria-hidden="true">${sym[c.status] || "·"}</span><span>${esc(c.name)}</span><span class="sum">${esc(c.summary)}</span>`).join("")}</div></div>
+    <div><h4>Rules at the time</h4><ul class="rules-used">
+      <li><b>Small differences are fine:</b> up to ${tol.percent ?? "?"}% of the order or ${inr(tol.absolute_inr)}, whichever is less.</li>
+      <li><b>Over ${inr(rules.approval_limit_inr)} needs a manager's OK,</b> even when everything is correct.</li>
+      <li><b>No order number?</b> We only match the order ourselves when we're at least ${Math.round((rules.po_inference_min_confidence ?? 0) * 100)}% sure.</li></ul></div>
+    <div><h4>Proof</h4><dl class="proof">
+      <dt>File</dt><dd>${esc(plainName(r.file_name))}${r.file_bytes != null ? `, ${kb(r.file_bytes)}` : ""}. ${r.file_deleted_at ? "Deleted." : r.file_kept ? "Still stored." : "No longer stored."}</dd>
+      ${r.vendor_gstin ? `<dt>Vendor GSTIN</dt><dd>${esc(r.vendor_gstin)}</dd>` : ""}
+      <dt>Fingerprint</dt><dd><code title="${esc(fp)}">${esc(fp.slice(0, 12))}…${esc(fp.slice(-4))}</code><span class="hint">A code unique to this exact file. If the same file is ever sent again, it will match.</span></dd>
+      <dt>Reference</dt><dd><code>${esc(r.run_id)}</code></dd></dl></div>
+    <div><button class="btn" data-copylog="${esc(r.run_id)}">Copy summary</button></div></div>`;
+}
+function copySummary(r) {
+  const why = r.reasons.filter(x => x !== "All checks passed.");
+  return [`Invoice ${r.invoice_number || plainName(r.file_name)} from ${r.vendor_name || "an unknown sender"}${r.total ? ", " + inr(r.total) : ""}`,
+    `${VERB[r.decision]} on ${fmtWhen(r.decided_at)}.`, "", "Why:", ...(why.length ? why : ["All checks passed."]).map(x => "- " + x), "",
+    "What to do next:", ...r.next_actions.map(x => "- " + x), "", `File fingerprint (SHA-256): ${r.file_sha256}`, `Reference: ${r.run_id}`].join("\n");
+}
+function wireCopy(root, rows) {
+  root.querySelectorAll("[data-copylog]").forEach(b => b.onclick = async () => {
+    const r = rows.find(x => x.run_id === b.dataset.copylog);
+    try { await navigator.clipboard.writeText(copySummary(r)); b.textContent = "Copied"; } catch { b.textContent = "Couldn't copy"; }
+    setTimeout(() => b.textContent = "Copy summary", 1600);
+  });
+}
+function renderLog(rows, openAll, openId) {
+  if (!rows.length) { $("#log").innerHTML = `<div class="empty-state">${$("#log-q").value ? "Nothing matches that search." : "No decisions yet."}</div>`; return; }
+  const days = []; rows.forEach(r => { const d = dayOf(r.decided_at); (days.at(-1)?.d === d ? days.at(-1).rows : (days.push({ d, rows: [] }), days.at(-1).rows)).push(r); });
+  $("#log").innerHTML = days.map(g => `<h3 class="day-h">${esc(g.d)}</h3><ul class="log">${g.rows.map(r => `<li><details${openAll || openId === r.run_id ? " open" : ""}><summary>
+      <span class="pin ${r.decision}"></span><span class="time">${esc(timeOf(r.decided_at))}</span>
+      <span class="line"><b>${VERB[r.decision]}:</b> ${esc(r.invoice_number ? r.invoice_number : plainName(r.file_name))}, ${esc(r.vendor_name || "unknown sender")}<span class="sub">${esc(r.headline)}</span></span>
+      <span class="amt">${r.total ? inr(r.total) : ""}</span></summary>${entryHtml(r)}</details></li>`).join("")}</ul>`).join("");
+  wireCopy($("#log"), rows);
+}
+async function openLog(runId) { show("history"); tab("log"); $("#log-q").value = ""; await loadLog(runId); document.querySelector("#log details[open]")?.scrollIntoView({ block: "center" }); }
+
+async function loadHistory() {
+  const hist = await api("/api/runs");
+  // tiles show money as well as counts: "₹1.8 lakh ready to pay" means more than "2 passed"
+  const tile = (cls, label, list) => `<div class="count ${cls}"><span class="lbl">${label}</span><b>${inr(list.reduce((a, r) => a + (r.total || 0), 0))}</b><small>${list.length} invoice${list.length === 1 ? "" : "s"}</small></div>`;
+  const by = k => hist.filter(r => r.decision === k);
+  $("#counts").innerHTML = hist.length ? tile("APPROVE", "Ready to pay", by("APPROVE")) + tile("HOLD", "On hold", by("HOLD"))
+    + tile("REJECT", "Rejected", by("REJECT")) + tile("SAVED", "Saved to records", hist.filter(r => r.saved)) : "";
+  const opts = [["all", "All"], ["saved", "Saved to records"], ["unsaved", "Not saved"]];
+  $("#filters").innerHTML = opts.map(([k, l]) => `<button data-f="${k}" aria-pressed="${filter === k}">${l}</button>`).join("");
+  $("#filters").querySelectorAll("button").forEach(b => b.onclick = () => { filter = b.dataset.f; loadHistory(); });
+  const rows = hist.filter(r => filter === "all" || (filter === "saved") === !!r.saved);
+  if (!hist.length) { $("#table").innerHTML = `<div class="empty-state">Nothing checked yet. Go to Check and upload an invoice.</div>`; return; }
+  if (!rows.length) { $("#table").innerHTML = `<div class="empty-state">Nothing here with this filter.</div>`; return; }
+  const when = r => new Date(r.processed_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const rec = r => r.saved ? `<span class="tag SAVED">Saved</span>` : r.decision === "REJECT" ? "" : `<span class="muted small">Not saved</span>`;
+  $("#table").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Checked</th><th>Vendor</th><th>Invoice</th><th class="r">Amount</th><th>Result</th><th>Records</th></tr></thead><tbody>
+    ${rows.map(r => `<tr class="click" tabindex="0" data-id="${esc(r.run_id)}"><td class="small">${esc(when(r))}</td><td><span class="who">${avatar(r.vendor_name || "?", true)}${esc(r.vendor_name || "Not identified")}</span></td>
+      <td>${esc(r.invoice_number || r.file)}</td><td class="r">${r.total ? inr(r.total) : ""}</td><td><span class="tag ${r.decision}">${WORD[r.decision]}</span></td><td>${rec(r)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="cards">${rows.map(r => `<button class="card" data-id="${esc(r.run_id)}"><div class="row"><span class="who">${avatar(r.vendor_name || "?", true)}<b>${esc(r.vendor_name || "Not identified")}</b></span><span class="amt">${r.total ? inr(r.total) : ""}</span></div>
+      <div class="row"><span class="tag ${r.decision}">${WORD[r.decision]}</span>${rec(r)}</div><span class="muted small">${esc(r.invoice_number || r.file)}, ${esc(when(r))}</span></button>`).join("")}</div>`;
+  $("#table").querySelectorAll("[data-id]").forEach(el => {
+    el.onclick = () => openCheck(el.dataset.id);
+    if (el.tagName === "TR") el.onkeydown = e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openCheck(el.dataset.id));
+  });
+}
+async function openCheck(id) {
+  const d = await api(`/api/runs/${encodeURIComponent(id)}`);
+  $("#panel").innerHTML = `<div class="head"><div><h1 id="dr-title" style="font-size:1.35rem">${esc(d.vendor?.name || d.file)}</h1>
+    <p class="muted">${esc(d.invoice?.number || d.file)}${d.invoice?.po ? `, ${esc(d.invoice.po)}` : ""}</p></div><button class="icon-btn" id="close" aria-label="Close">×</button></div>
+    <div class="two"><div><div id="dr-result"></div><div id="dr-read"></div><div class="panel-card"><h3>Checks <span>Tap a check for details</span></h3><ol id="dr-steps" class="steps"></ol></div>
+    <div class="panel-card"><h3>Timeline <span>Kept permanently</span></h3><div id="dr-tl" class="muted small">Loading…</div></div></div>
+    <div><div class="sheet" id="dr-sheet"></div><p class="sheet-cap"><a href="/api/file/${encodeURIComponent(d.file)}" target="_blank" rel="noopener">Open original</a></p></div></div>`;
+  renderResult($("#dr-result"), d, true); renderRead($("#dr-read"), d);
+  api(d.sha256 ? `/api/log?sha=${d.sha256}` : `/api/log?q=${encodeURIComponent(d.run_id)}`).then(rows => {
+    const ev = rows.flatMap(events);
+    $("#dr-tl").classList.remove("muted", "small");
+    $("#dr-tl").innerHTML = ev.length ? tlHtml(ev) + `<button class="link" id="dr-full">See the full record</button>` : `<p class="muted small">No timeline for checks made before the audit trail existed.</p>`;
+    $("#dr-full")?.addEventListener("click", () => { closeDrawer(); openLog(d.run_id); });
+  });
+  setPreview(d.file, $("#dr-sheet")); stamp($("#dr-sheet"), d.decision, false);
+  const ol = $("#dr-steps"); ol.innerHTML = stepRows();
+  d.stages.forEach(st => { const li = stepEl(ol, st.key); if (li) fillStep(li, st); });
+  markUnchecked(ol);
+  $("#drawer").hidden = false; $("#close").focus(); $("#close").onclick = closeDrawer;
+}
+function closeDrawer() { $("#drawer").hidden = true; }
+$("#drawer").addEventListener("click", e => e.target.id === "drawer" && closeDrawer());
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDrawer(); closeSamples(); } });
+
+/* guided tour: the samples in an order that tells a story */
+const TOUR = [
+  { id: "01", say: "A normal invoice: <mark>every check passes</mark>.", task: "<b>Save it</b> so later invoices are checked against it.", save: true },
+  { id: "05", say: "The same invoice, rescanned and renumbered: <mark>caught as a duplicate</mark>." },
+  { id: "03", say: "First delivery: <mark>240 of 400 rolls</mark>, within the order.", task: "<b>Save it</b> too.", save: true },
+  { id: "04", say: "Together with the first delivery it <mark>bills more than was ordered</mark>." },
+  { id: "07", say: "Right total, <mark>wrong type of GST</mark>: the tax credit would be lost." },
+  { id: "08", say: "Everything matches except the <mark>bank account</mark>: a common fraud." },
+  { id: "12", say: "<mark>Changed by hand</mark> with a pen: needs a revised invoice." },
+  { id: "06", say: "No PO number on it: the system <mark>works out the order</mark> itself." },
+  { id: "11", say: "A <mark>phone photo</mark>, tilted and blurry: still read correctly." },
+  { id: "13", say: "<mark>₹290 over</mark> the order: small enough to pass, with a note." },
+  { id: "10", say: "A perfect invoice, but <mark>over ₹5 lakh</mark>: a manager signs off." },
+  { id: "09", say: "From a <mark>blocked vendor</mark>: rejected.", last: true },
+];
+let tourAt = -1;
+trail.push({ screen: "home" }); at = 0; history.replaceState({ at }, "");
+const tourSample = i => samples.find(x => x.id === TOUR[i].id);
+function goTour(i) {
+  tourAt = i; document.body.classList.add("touring");
+  const s = tourSample(i); check(s.file, `${s.id}. ${s.title}`, s.blurb); renderTour();
+}
+function renderTour() {
+  const bar = $("#tour");
+  if (tourAt < 0) { bar.hidden = true; return; }
+  const t = TOUR[tourAt]; bar.hidden = false;
+  $("#tour-no").textContent = `Tour, step ${tourAt + 1} of ${TOUR.length}`;
+  if (running) $("#tour-say").textContent = "Checking…"; else $("#tour-say").innerHTML = t.say;
+  const task = $("#tour-task"), needsSave = t.save && !(lastResult && lastResult.saved);
+  task.hidden = running || !t.task || !needsSave; task.innerHTML = t.task || "";
+  $("#tour-back").disabled = running || tourAt === 0;
+  const next = $("#tour-next");
+  next.disabled = running;
+  next.textContent = t.last ? "Finish" : needsSave ? "Save and continue" : "Next";
+}
+async function tourNext() {
+  const t = TOUR[tourAt];
+  if (t.save && lastResult && !lastResult.saved) {
+    try { await api(`/api/runs/${encodeURIComponent(lastResult.run_id)}/save`, { method: "POST" }); lastResult.saved = true; } catch (e) { /* shown on the card if they press save themselves */ }
+  }
+  if (t.last) { endTour(); show("history"); return; }
+  goTour(tourAt + 1);
+}
+function endTour() { tourAt = -1; document.body.classList.remove("touring"); $("#tour").hidden = true; }
+$("#tour-next").onclick = tourNext;
+$("#tour-back").onclick = () => tourAt > 0 && goTour(tourAt - 1);
+$("#tour-end").onclick = endTour;
+$("#start-tour").onclick = async () => { closeSamples(); await api("/api/reset", { method: "POST" }); goTour(0); };
+$("#clear").onclick = async () => {
+  const b = $("#clear");
+  if (!b.dataset.armed) {
+    b.dataset.armed = "1"; b.textContent = "Click again to clear (the decision log is kept)";
+    setTimeout(() => { delete b.dataset.armed; b.textContent = "Clear history"; }, 4000);
+    return;
+  }
+  delete b.dataset.armed; b.textContent = "Clear history";
+  await api("/api/reset", { method: "POST" }); filter = "all"; loadHistory();
+};
+
+/* rules */
+async function loadRules() {
+  const s = await api("/api/setup"); const p = s.policy, t = p.tolerance;
+  $("#rules").innerHTML = `
+  <section><h2>Held for a person when</h2><dl>
+    <dt>It goes over the order</dt><dd>Everything saved against a purchase order is added up. Over by more than ${t.percent}% or ${inr(t.absolute_inr)} (whichever is smaller) and it's held. Smaller differences pass with a note.</dd>
+    <dt>It's over ${inr(p.approval_limit_inr)}</dt><dd>A finance manager signs off anything above this, however correct.</dd>
+    <dt>The bank account has changed</dt><dd>The most common invoice fraud. Call the vendor on the number already on file first.</dd>
+    <dt>The GST type is wrong</dt><dd>Same state as us means CGST + SGST, another state means IGST. Otherwise the tax credit is lost.</dd>
+    <dt>It's been changed by hand</dt><dd>A GST invoice can't be corrected with a pen; it needs a revised invoice or a debit note.</dd>
+    <dt>It can't be read, or the order can't be found</dt><dd>Missing details, or no open order matches clearly enough.</dd>
+  </dl></section>
+  <section class="rej"><h2>Rejected when</h2><dl>
+    <dt>It's already in records</dt><dd>Same vendor, invoice number, financial year and amount, however the number or date is written.</dd>
+    <dt>The vendor is blocked or unknown</dt><dd>Only approved vendors get paid.</dd>
+    <dt>The order is closed or belongs to another vendor</dt><dd>Nothing more can be billed against it.</dd>
+    <dt>It isn't an invoice</dt><dd>A CV, a report, a damaged file.</dd>
+  </dl></section>
+  <section class="ass"><h2>Assumed for this demo</h2><dl>
+    <div><dt>Checked against the order</dt><dd>Not yet against goods received.</dd></div>
+    <div><dt>GST at 18%</dt><dd>On every item here, for simplicity.</dd></div>
+    <div><dt>${s.extractor === "mock" ? "Demo mode" : "Reading"}</dt><dd>${s.extractor === "mock" ? "Invoices are read from saved answers, not by the AI." : "Google Gemini reads each invoice once; the reading is kept, so a re-check gives the same answer."}</dd></div>
+  </dl></section>`;
+  $("#po-table").innerHTML = `<table><thead><tr><th>PO</th><th>Vendor</th><th class="hide-sm">For</th><th class="r">Value</th><th>Billed so far</th></tr></thead><tbody>
+    ${s.pos.map(o => { const pct = o.value ? o.billed / o.value * 100 : 0; const over = o.billed - o.value > Math.min(o.value * t.percent / 100, t.absolute_inr);
+      return `<tr><td>${esc(o.po_number)}${o.status !== "open" ? ` <span class="muted small">(${esc(o.status)})</span>` : ""}</td><td>${esc(o.vendor)}</td><td class="hide-sm">${esc(o.description)}</td>
+      <td class="r">${inr(o.value)}</td><td><span class="amt">${inr(o.billed)}</span><div class="meter ${over ? "over" : ""}"><i style="width:${Math.min(pct, 100)}%"></i></div></td></tr>`; }).join("")}</tbody></table>`;
+  $("#vendor-table").innerHTML = `<table><thead><tr><th>Vendor</th><th class="hide-sm">GSTIN</th><th>State</th><th class="hide-sm">Bank on file</th><th>Status</th></tr></thead><tbody>
+    ${s.vendors.map(v => `<tr><td>${esc(v.name)}</td><td class="hide-sm">${esc(v.gstin)}</td><td>${esc(v.state)}</td><td class="hide-sm">${esc(v.bank)}</td>
+      <td>${v.status === "approved" ? `<span class="tag APPROVE">Approved</span>` : `<span class="tag REJECT">Blocked</span> <span class="muted small">${esc(v.block_reason)}</span>`}</td></tr>`).join("")}</tbody></table>`;
+}
+
+(async () => {
+  await loadSamples();
+  const s = await api("/api/setup");
+  $("#mode").textContent = s.extractor === "mock" ? "Demo mode: saved answers" : "";
+})();
+</script>
+</body>
+</html>

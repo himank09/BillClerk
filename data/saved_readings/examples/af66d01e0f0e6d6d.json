@@ -1,0 +1,45 @@
+{
+  "model": "gemini-3-flash-preview",
+  "file": "04_sahyadri_split_part2_overbill.pdf",
+  "fields": {
+    "vendor_name": "Sahyadri Industrial Packaging Pvt Ltd",
+    "vendor_gstin": "27AAKCS5506P1ZQ",
+    "buyer_name": "RJ Garments Pvt Ltd",
+    "buyer_gstin": "33AAKCR5148N1ZW",
+    "invoice_number": "SIP/2627/0347",
+    "invoice_date": "27/10/2026",
+    "po_reference": "PO-2026-1003",
+    "place_of_supply": "Tamil Nadu",
+    "line_items": [
+      {
+        "description": "LLDPE stretch wrap film, 500mm x 23 micron",
+        "hsn_sac": "3920",
+        "qty": 176.0,
+        "unit": "Rolls",
+        "unit_price": 250.0,
+        "gst_rate": 18.0,
+        "taxable_value": 44000.0
+      }
+    ],
+    "taxable_value": 44000.0,
+    "cgst": null,
+    "sgst": null,
+    "igst": 7920.0,
+    "total": 51920.0,
+    "bank_name": "Bank of Maharashtra",
+    "bank_account": "60284417730",
+    "ifsc": "MAHB0000417",
+    "is_invoice": true,
+    "document_type": "tax invoice",
+    "has_handwritten_changes": false,
+    "handwritten_notes": null,
+    "confidence": {
+      "vendor_gstin": 1.0,
+      "invoice_number": 1.0,
+      "invoice_date": 1.0,
+      "po_reference": 1.0,
+      "line_items": 1.0,
+      "total": 1.0
+    }
+  }
+}
