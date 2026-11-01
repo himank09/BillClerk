@@ -296,11 +296,12 @@ SELVI, KUMARAN = V["V007"], V["V008"]
 INFORMAL = [
     dict(id="T21", file="T21_handwritten_bill_book_photo.jpg", kind="book_photo", shop=SELVI, bill_no="0457", date="28/10/26",
          rows=[("Poly thread cones (black)", 20, 85), ("Machine needles DBx1 (pkt)", 10, 95), ("Elastic 1 inch (roll)", 4, 200)],
-         expected="APPROVE", problem="A hand-filled bill-book bill from a small shop, photographed",
-         why="Selvi has no GSTIN and charges none, so it's a valid bill (not a tax invoice). Small purchase, no order needed."),
+         expected="HOLD", after_confirm="APPROVE", problem="A hand-filled bill-book bill from a small shop, photographed",
+         why="Everything checks out: Selvi has no GSTIN and charges none, and it's under ₹6,000 so no order is needed. "
+             "A hand-written bill is easy to make up, so the buyer confirms the goods arrived; then it's passed for payment, by UPI."),
     dict(id="T22", file="T22_new_small_shop.pdf", kind="book_scan", shop=UNKNOWN_SHOP, bill_no="1182", date="29/10/26",
          rows=[("Tube light 4 ft", 6, 280), ("Wire roll 1.5 sqmm", 1, 1120)],
-         expected="HOLD", problem="A shop we've never bought from, small amount",
+         expected="HOLD", after_confirm="APPROVE", problem="A shop we've never bought from, small amount",
          why="Not on the supplier list but under ₹6,000, so the person who bought it confirms rather than an outright reject."),
     dict(id="T23", file="T23_gst_added_without_gstin.pdf", kind="book_scan", shop=SELVI, bill_no="0463", date="30/10/26",
          rows=[("Poly thread cones (black)", 20, 85), ("Machine needles DBx1 (pkt)", 10, 95), ("Elastic 1 inch (roll)", 4, 200)],
@@ -310,13 +311,36 @@ INFORMAL = [
     dict(id="T24", file="T24_gst_applied_for.pdf", kind="simple", shop=KUMARAN, bill_no="KTS/112", date="27-10-2026",
          rows=[("Measuring tapes (fibreglass)", 20, 60), ("Tailor's chalk (box of 10)", 10, 90), ("Fabric scissors 10 inch", 6, 512.5)],
          arn="AA331026047118Q",
-         expected="APPROVE", problem="Shop's GST registration still in progress, no GST charged",
-         why="Correct: GST can't be charged until the GSTIN is issued. Pay it, and ask for GST invoices once they have the number."),
+         expected="HOLD", after_confirm="APPROVE", problem="Shop's GST registration still in progress, no GST charged",
+         why="Correct: GST can't be charged until the GSTIN is issued. Once the buyer confirms it, it's passed; "
+             "there's no bank or UPI on file, so the next step is to ask for a UPI ID."),
     dict(id="T25", file="T25_big_cash_bill.pdf", kind="simple", shop=KUMARAN, bill_no="KTS/118", date="30-10-2026",
          rows=[("Industrial fabric scissors 12 inch", 10, 1850), ("Cutting table cover (heavy)", 5, 2400), ("Pattern paper roll", 20, 400)],
          arn="AA331026047118Q",
          expected="HOLD", problem="₹38,500 with no bank details and no order",
-         why="Over ₹10,000 it can't be paid in cash (Income Tax s.40A(3)) and there are no bank details; also too big to buy without an order."),
+         why="Over ₹10,000 it can't be paid in cash (Income Tax s.40A(3)) and there are no bank details. It's also over the "
+             "₹25,000 a month for a supplier without a GSTIN, and too big to buy without an order."),
+    # T26a must be confirmed and saved first: T26b and T27 are only problems next to it
+    dict(id="T26a", file="T26a_confirm_and_save_this_first.pdf", kind="book_scan", shop=SELVI, bill_no="0470", date="31/10/26", seed=261,
+         rows=[("Poly thread cones (white)", 24, 85), ("Overlock thread (pkt)", 8, 120), ("Shirt buttons (gross)", 4, 200)],
+         expected="HOLD", after_confirm="APPROVE", problem="Nothing: a normal Selvi bill, to confirm and save first",
+         why="Press Confirm received, then Save to records. Then try T26b and T27."),
+    dict(id="T26b", file="T26b_second_bill_same_day.pdf", kind="book_scan", shop=SELVI, bill_no="0471", date="31/10/26", seed=262,
+         needs_first="T26a",
+         rows=[("Machine needles DBx1 (pkt)", 10, 95), ("Elastic 1 inch (roll)", 6, 200), ("Zips 7 inch (dozen)", 10, 175)],
+         expected="HOLD", problem="A second bill from the same shop on the same day",
+         why="₹3,900 alone is fine, but with T26a (₹3,800) it's ₹7,700 on one day, over the ₹6,000 limit without an order. "
+             "Splitting one purchase into small bills is the usual way round the limit."),
+    dict(id="T27", file="T27_bill_number_goes_backwards.pdf", kind="book_scan", shop=SELVI, bill_no="0432", date="01/11/26", seed=27,
+         needs_first="T26a",
+         rows=[("Poly thread cones (black)", 10, 85), ("Shirt buttons (gross)", 3, 200), ("Tailor's chalk (box)", 5, 130)],
+         expected="HOLD", problem="Bill number lower than an earlier bill's",
+         why="Bill no. 0432 is dated after bill no. 0470 (T26a). Bill-book numbers only go up, so this may be from a second bill book."),
+    dict(id="T28", file="T28_wrong_phone_number.jpg", kind="book_photo", shop=dict(SELVI, phone="+91 98432 71760"),
+         bill_no="0466", date="29/10/26",
+         rows=[("Poly thread cones (black)", 30, 85), ("Elastic 1 inch (roll)", 5, 200), ("Machine needles DBx1 (pkt)", 7, 100)],
+         expected="HOLD", problem="Selvi's name, but a different phone number",
+         why="The bill says +91 98432 71760; Selvi's number on file is +91 98432 17760. A fake bill usually copies the name, not the number."),
 ]
 
 
@@ -326,16 +350,18 @@ def make_informal(answers):
             pdf, total = simple_bill(s["shop"], s["bill_no"], s["date"], s["rows"], s["arn"])
             (OUT / s["file"]).write_bytes(pdf)
         else:
-            pdf, total = bill_book(s["shop"], s["bill_no"], s["date"], s["rows"], s.get("extra"), seed=int(s["id"][1:]))
+            seed = s.get("seed") or int(s["id"][1:])
+            pdf, total = bill_book(s["shop"], s["bill_no"], s["date"], s["rows"], s.get("extra"), seed=seed)
             if s["kind"] == "book_photo":
-                mi.to_photo(pdf, OUT / s["file"], seed=int(s["id"][1:]))
+                mi.to_photo(pdf, OUT / s["file"], seed=seed)
             else:
-                mi.to_scan(pdf, OUT / s["file"], seed=int(s["id"][1:]), angle=1.4)
+                mi.to_scan(pdf, OUT / s["file"], seed=seed, angle=1.4)
         items = [dict(description=d, hsn_sac=None, qty=q, unit=None, unit_price=r, gst_rate=None, taxable_value=q * r)
                  for d, q, r in s["rows"]]
         sub = sum(i["taxable_value"] for i in items)
         tax = {"CGST": s["extra"][1] / 2, "SGST": s["extra"][1] / 2} if s.get("extra") else {}
-        answers.append(dict(id=s["id"], file=s["file"], problem=s["problem"], expected=s["expected"], why=s["why"], needs_first=None,
+        answers.append(dict(id=s["id"], file=s["file"], problem=s["problem"], expected=s["expected"], why=s["why"],
+                            needs_first=s.get("needs_first"), after_confirm=s.get("after_confirm"),
                             printed=dict(vendor_name=s["shop"]["name"], vendor_gstin=None, vendor_phone=s["shop"]["phone"],
                                          gst_registration="applied" if s.get("arn") else "none", gst_arn=s.get("arn"),
                                          written_by_hand=s["kind"] != "simple", buyer_gstin=None,

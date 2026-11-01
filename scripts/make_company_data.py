@@ -60,12 +60,13 @@ VENDORS = [
     # They bill from a bill book or a simple printed memo, and take payment by UPI or cash.
     dict(vendor_id="V007", phone="+91 98432 17760", registration="unregistered", name="Selvi Thread & Needle Store",
          address="12, Kamaraj Street, Khaderpet, Tiruppur 641601", state="Tamil Nadu", state_code="33", pan="",
-         bank_name="", bank_account="", ifsc="", email="", status="approved"),
+         bank_name="", bank_account="", ifsc="", email="", upi="9843217760@okaxis", status="approved"),
     dict(vendor_id="V008", phone="+91 94433 52081", registration="applied", name="Kumaran Tailoring Supplies",
          address="45, Palladam Road, Tiruppur 641604", state="Tamil Nadu", state_code="33", pan="",
          bank_name="", bank_account="", ifsc="", email="kumarantailoring@example.com", status="approved"),
 ]
 for v in VENDORS:
+    v.setdefault("upi", "")
     v["gstin"] = make(v["state_code"], v["pan"]) if v["pan"] else ""
     v.setdefault("block_reason", "")
 
@@ -126,7 +127,7 @@ def main():
     (DATA / "buyer.json").write_text(json.dumps(BUYER, indent=2))
 
     vcols = ["vendor_id", "name", "gstin", "pan", "address", "state", "state_code",
-             "bank_name", "bank_account", "ifsc", "email", "phone", "registration", "status", "block_reason"]
+             "bank_name", "bank_account", "ifsc", "email", "phone", "upi", "registration", "status", "block_reason"]
     with open(DATA / "vendors.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=vcols)
         w.writeheader()
@@ -157,6 +158,7 @@ def main():
         "approval_limit_inr": 500000,
         "petty_limit_inr": 6000,
         "cash_limit_inr": 10000,
+        "small_supplier_month_cap_inr": 25000,
         "duplicate_window_days": 365,
         "max_invoice_age_days": 365,
         "po_inference_min_confidence": 0.85,

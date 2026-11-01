@@ -27,7 +27,14 @@ Each invoice goes through nine steps:
 - **Nothing changes until you say so.** Checking an invoice records nothing. *Save to records* is the human sign-off: only saved invoices count when spotting duplicates or adding up what's been billed against an order. *Undo* takes it back.
 - **Audit trail.** Every decision is kept permanently with its reasons, the rules in force at the time and a fingerprint of the file. If a vendor asks months later why an invoice was rejected, the answer is there, even if the file was deleted. *Find by file* matches a disputed file to its decision without storing it.
 - **Uploads don't pile up.** An upload you haven't saved can be deleted with one click, and is deleted automatically after 24 hours anyway.
-- **Small suppliers count too.** Not every supplier has a GSTIN or prints proper invoices. A thread shop's hand-filled bill book, a photo of a cash memo, or a shop whose GST registration is still being processed are all valid bills. BillClerk reads them, finds the supplier by phone or name, and applies the rules that fit: they can't charge GST, buys up to ₹6,000 don't need a purchase order, and bills over ₹10,000 must be paid by bank.
+- **Small suppliers count too, with their own safeguards.** Not every supplier has a GSTIN or prints proper invoices. A thread shop's hand-filled bill book, a photo of a cash memo, or a shop whose GST registration is still being processed are all valid bills, but they're also the easiest to make up. So BillClerk reads them, finds the supplier by phone or name, and then:
+  - **never pays them on the bill alone.** A bill that passes every check waits for the person who bought the goods to press *Confirm received*. Their name and the time go into the audit trail.
+  - **adds up bills from the same shop on the same day**, so one ₹9,000 purchase split into two ₹4,500 bills is caught, and the ₹10,000 cash limit is applied per day as the law says.
+  - **holds a shop that goes over ₹25,000 a month.** Buying that much regularly needs a proper supplier set-up.
+  - **checks the bill-book number goes up** and **the phone number matches the one on file**. A fake bill usually copies the shop's name, not its number.
+  - **says how to pay:** by UPI to the ID on file, checking the payee name and keeping the receipt.
+
+  This follows how expense tools and petty-cash systems handle receipts: a person vouches for small purchases, limits apply per day and per month as well as per bill, and the payment leaves a record.
 - **It survives a bad day at Google.** If Gemini is busy or slow, BillClerk retries, then tries another model. If nothing works, the invoice is put on hold for a person instead of guessed at. Each reading is saved, so checking the same file again is instant.
 
 ## Run it on your computer
@@ -88,7 +95,7 @@ There's no public dataset that links real invoices to purchase orders and a vend
 | Coromandel Facility Services | Chennai | housekeeping, pest control |
 | Konkan Tech Hardware | Mumbai | laptops, barcode scanners |
 | Deccan Electricals | Hyderabad | blocked after failing a KYC check |
-| Selvi Thread & Needle Store | Tiruppur | thread, needles, elastic; no GSTIN, hand-written bill book |
+| Selvi Thread & Needle Store | Tiruppur | thread, needles, elastic; no GSTIN, hand-written bill book, paid by UPI |
 | Kumaran Tailoring Supplies | Tiruppur | tailoring supplies; GST registration applied for |
 
 **The thirteen invoices** come in three different layouts, like real vendors' invoices would. 05, 06 and 12 are scans with no selectable text, and 11 is a phone photo.
@@ -111,7 +118,7 @@ There's no public dataset that links real invoices to purchase orders and a vend
 
 Order matters for two of them: 05 is only a duplicate once 01 is saved, and 04 only goes over the order once 03 is saved. `check_invoices.py --all` and the guided tour both run them in the right order.
 
-**Want to try more?** `test_bills/` has 27 more invoices it has never seen, one problem each: an unknown vendor, an invalid GSTIN, a bill made out to another company, a wrong total, GST at the wrong rate, a future date, a made-up order number, a quotation pretending to be an invoice, hand-written bills from small shops, GST charged without a GSTIN, a big cash bill, and more. Its README lists what each one should get.
+**Want to try more?** `test_bills/` has 31 more invoices it has never seen, one problem each: an unknown vendor, an invalid GSTIN, a bill made out to another company, a wrong total, GST at the wrong rate, a future date, a made-up order number, a quotation pretending to be an invoice, hand-written bills from small shops, GST charged without a GSTIN, a big cash bill, one purchase split into two bills, a bill-book number that goes backwards, a fake phone number, and more. Its README lists what each one should get.
 
 ## Assumptions
 
@@ -123,8 +130,9 @@ These are written into `data/rules.json` and shown on the app's Rules page.
 - **Every item is taxed at 18%,** to keep the test data simple.
 - **An invoice number can't repeat within a financial year,** as GST rules require. That's what makes duplicates detectable.
 - **Small suppliers without a GSTIN:** a business with turnover under ₹40 lakh (goods) or ₹20 lakh (services) doesn't have to register for GST, and an unregistered business can't charge it (CGST Act s.32). Their bills are paid without GST credit. If one adds GST anyway, the bill is held.
-- **Purchases up to ₹6,000 don't need a purchase order.** It's a company setting in `rules.json`, kept low because small suppliers are paid without the GST checks. A first bill from a supplier not on the list is held for the buyer to confirm if it's under this; above it, it's rejected like any unknown vendor.
-- **Over ₹10,000 must go by bank.** Cash payments above ₹10,000 a day to one person can't be claimed as a business expense (Income Tax s.40A(3)), so a bill like that with no bank details anywhere is held.
+- **Purchases up to ₹6,000 don't need a purchase order.** It's a company setting in `rules.json`, kept low because small suppliers are paid without the GST checks. Bills from one supplier on the same day count together. A first bill from a supplier not on the list is held for the buyer to confirm if it's under this; above it, it's rejected like any unknown vendor.
+- **A supplier without a GSTIN can bill up to ₹25,000 a month.** Also a setting in `rules.json`. Above it they should be set up like any other vendor, with purchase orders and bank details.
+- **Over ₹10,000 must go by bank or UPI.** Cash payments above ₹10,000 a day to one person can't be claimed as a business expense (Income Tax s.40A(3)), so bills like that with no bank or UPI details are held. Bills from the same supplier on the same day are added up for this.
 - **An order is only worked out automatically when BillClerk is at least 85% sure** and the next best match is clearly behind. Otherwise a person picks.
 
 ## What's where
@@ -146,7 +154,7 @@ data/
   correct_answers.json the right reading and decision for each test invoice
   saved_readings/      Gemini's readings, so a file is only read once
 invoices/              the 13 test invoices
-test_bills/            27 more invoices to upload yourself, one problem each
+test_bills/            31 more invoices to upload yourself, one problem each
 scripts/               makes the test data, checks it, and pre-draws invoice previews
 check_invoices.py      runs invoices from the command line
 start_app.py           starts the web app

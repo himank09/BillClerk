@@ -8,6 +8,7 @@
   "approval_limit_inr": 500000,
   "petty_limit_inr": 6000,
   "cash_limit_inr": 10000,
+  "small_supplier_month_cap_inr": 25000,
   "duplicate_window_days": 365,
   "max_invoice_age_days": 365,
   "po_inference_min_confidence": 0.85,

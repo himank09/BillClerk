@@ -124,6 +124,12 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
 .actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
 .saved-note { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--pass); }
 .err { color: var(--reject); font-size: 0.9rem; margin-top: 0.55rem; }
+.confirm { margin-bottom: 0.9rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--line, #E3E7EC); }
+.confirm label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+.confirm .row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.confirm input { flex: 1 1 14rem; font: inherit; padding: 0.55rem 0.75rem; border: 1px solid #C9D1DA; border-radius: 8px; }
+.confirm input:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus); }
+.confirm p { margin: 0.45rem 0 0; }
 .emails { margin-top: 0.9rem; }
 .email { background: var(--paper); border-radius: 10px; padding: 0.8rem 0.95rem; margin-top: 0.5rem; }
 .email .sub { font-weight: 700; }
@@ -330,7 +336,7 @@ tr.click { cursor: pointer; } tr.click:hover { background: #FAFAFF; }
 .rules dd { margin: 0.1rem 0 0; color: var(--ink-soft); }
 .rules .ass dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1.25rem; }
 .rules section.small { border-top-color: var(--hold); }
-.rules .small dl { grid-template-columns: repeat(4, 1fr); }
+.rules .small dl { grid-template-columns: repeat(4, 1fr); gap: 0.4rem 1.25rem; }
 .meter { height: 7px; background: var(--line-faint); border-radius: 4px; overflow: hidden; margin-top: 0.3rem; min-width: 90px; }
 .meter i { display: block; height: 100%; background: var(--violet); }
 .meter.over i { background: var(--reject); }
@@ -654,6 +660,12 @@ function showResult(e) {
   setPreview(e.file, $("#sheet")); stamp($("#sheet"), d.decision, false);
   $("#sheet-name").textContent = e.file; $("#sheet-open").href = `/api/file/${encodeURIComponent(e.file)}`;
 }
+function refreshResult(d) {  // after the buyer confirms: same page, new verdict
+  const root = $("#steps");
+  d.stages.forEach(st => { const li = stepEl(root, st.key); if (li) fillStep(li, st); });
+  renderResult($("#result"), d, false); renderRead($("#read"), d);
+  stamp($("#sheet"), d.decision, true);
+}
 function fillStep(li, st) {
   li.dataset.s = st.status;
   $(".sum", li).textContent = st.summary;
@@ -734,15 +746,20 @@ function renderResult(el, d, inDrawer) {
   const blocking = d.flags.filter(f => f.severity === "HOLD" || f.severity === "REJECT");
   const also = [...new Set(blocking.map(f => f.short))].filter(x => x !== d.headline);
   const next = d.next_actions[0];
-  const canSave = d.decision !== "REJECT";
+  const canSave = d.decision !== "REJECT" && !d.confirmable;  // a small supplier's bill is confirmed before it's saved
   const mailLabel = n => `Draft email${n > 1 ? "s" : ""}`;
   const seen = (d.seen_before || [])[0];
   el.innerHTML = `<div class="result ${d.decision}">
     <div class="band"><span class="badge" aria-hidden="true">${BADGE[d.decision]}</span><div>
-      <div class="word">${WORD[d.decision]}</div><h2>${esc(d.headline)}</h2>
+      <div class="word">${d.confirmable ? "Needs the buyer's OK" : WORD[d.decision]}</div><h2>${esc(d.headline)}</h2>
       ${also.length ? `<ul class="also">${also.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
       ${next ? `<p class="next">→ ${esc(next)}</p>` : ""}</div></div>
     <div class="body">
+      ${d.confirmable ? `<form class="confirm" data-confirm>
+        <label for="who-${esc(d.run_id)}">Who received the goods?</label>
+        <div class="row"><input id="who-${esc(d.run_id)}" name="who" maxlength="60" autocomplete="name" placeholder="Name, e.g. Ravi (stores)" required>
+        <button class="btn primary">Confirm received</button></div>
+        <p class="muted small">Only confirm what you've seen arrive. Your name goes into the audit trail with this bill.</p></form>` : ""}
       <div class="actions">
         ${canSave ? `<span data-save></span>` : ""}
         ${d.emails.length ? `<button class="btn" data-mail>${mailLabel(d.emails.length)}</button>` : ""}
@@ -772,6 +789,17 @@ function renderResult(el, d, inDrawer) {
     catch (e) { err.textContent = e.message; err.hidden = false; }
   };
   renderSave();
+  el.querySelector("[data-confirm]")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const err = el.querySelector("[data-err]"); err.hidden = true;
+    const b = e.target.querySelector("button"); b.disabled = true;
+    try {
+      const nd = await api(`/api/runs/${encodeURIComponent(d.run_id)}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: e.target.who.value }) });
+      Object.assign(d, nd);  // the same object back/forward and the trail hold
+      if (inDrawer) { renderResult(el, d, true); loadHistory(); }
+      else refreshResult(d);
+    } catch (x) { err.textContent = x.message; err.hidden = false; b.disabled = false; }
+  });
   el.querySelector("[data-seen]")?.addEventListener("click", e => { closeDrawer(); openLog(e.target.dataset.seen); });
   el.querySelector("[data-del]")?.addEventListener("click", async e => {
     const b = e.target, err = el.querySelector("[data-err]"); err.hidden = true;
@@ -834,6 +862,7 @@ function sameIdea(a, b) {  // don't repeat the headline as a reason
 }
 function events(r) {  // what happened to this file, in order
   const ev = [{ t: r.decided_at, pin: r.decision, html: `<b>${VERB[r.decision]}.</b> ${esc(r.headline)}` }];
+  if (r.confirmed_at) ev.push({ t: r.confirmed_at, pin: "APPROVE", html: `<b>Received, confirmed by ${esc(r.confirmed_by)}.</b> Passed for payment.` });
   if (r.saved_at) ev.push({ t: r.saved_at, pin: "SAVED", html: `<b>Added to records.</b> New invoices are now checked against it.` });
   if (r.file_deleted_at) ev.push({ t: r.file_deleted_at, pin: "DEL", html: `<b>File deleted.</b> This record of the decision is kept.` });
   return ev;
@@ -852,7 +881,9 @@ function entryHtml(r) {
     <div><h4>Rules at the time</h4><ul class="rules-used">
       <li><b>Small differences are fine:</b> up to ${tol.percent ?? "?"}% of the order or ${inr(tol.absolute_inr)}, whichever is less.</li>
       <li><b>Over ${inr(rules.approval_limit_inr)} needs a manager's OK,</b> even when everything is correct.</li>
-      <li><b>No order number?</b> We only match the order ourselves when we're at least ${Math.round((rules.po_inference_min_confidence ?? 0) * 100)}% sure.</li></ul></div>
+      <li><b>No order number?</b> We only match the order ourselves when we're at least ${Math.round((rules.po_inference_min_confidence ?? 0) * 100)}% sure.</li>
+      ${rules.petty_limit_inr && !r.vendor_gstin ? `<li><b>Small suppliers without a GSTIN:</b> the buyer confirms the goods arrived; up to ${inr(rules.petty_limit_inr)} a day without an order${rules.small_supplier_month_cap_inr ? ` and ${inr(rules.small_supplier_month_cap_inr)} a month` : ""}; no more than ${inr(rules.cash_limit_inr)} a day in cash.</li>` : ""}</ul></div>
+    ${r.confirmed_at ? `<div><h4>Confirmed by</h4><p>${esc(r.confirmed_by)}, ${esc(fmtWhen(r.confirmed_at))}. They confirmed the goods arrived; the bill had passed every other check.</p></div>` : ""}
     <div><h4>Proof</h4><dl class="proof">
       <dt>File</dt><dd>${esc(plainName(r.file_name))}${r.file_bytes != null ? `, ${kb(r.file_bytes)}` : ""}. ${r.file_deleted_at ? "Deleted." : r.file_kept ? "Still stored." : "No longer stored."}</dd>
       ${r.vendor_gstin ? `<dt>Vendor GSTIN</dt><dd>${esc(r.vendor_gstin)}</dd>` : ""}
@@ -863,7 +894,7 @@ function entryHtml(r) {
 function copySummary(r) {
   const why = r.reasons.filter(x => x !== "All checks passed.");
   return [`Invoice ${r.invoice_number || plainName(r.file_name)} from ${r.vendor_name || "an unknown sender"}${r.total ? ", " + inr(r.total) : ""}`,
-    `${VERB[r.decision]} on ${fmtWhen(r.decided_at)}.`, "", "Why:", ...(why.length ? why : ["All checks passed."]).map(x => "- " + x), "",
+    `${VERB[r.decision]} on ${fmtWhen(r.decided_at)}.` + (r.confirmed_at ? ` Goods confirmed received by ${r.confirmed_by} on ${fmtWhen(r.confirmed_at)}; passed for payment.` : ""), "", "Why:", ...(why.length ? why : ["All checks passed."]).map(x => "- " + x), "",
     "What to do next:", ...r.next_actions.map(x => "- " + x), "", `File fingerprint (SHA-256): ${r.file_sha256}`, `Reference: ${r.run_id}`].join("\n");
 }
 function wireCopy(root, rows) {
@@ -877,8 +908,8 @@ function renderLog(rows, openAll, openId) {
   if (!rows.length) { $("#log").innerHTML = `<div class="empty-state">${$("#log-q").value ? "Nothing matches that search." : "No decisions yet."}</div>`; return; }
   const days = []; rows.forEach(r => { const d = dayOf(r.decided_at); (days.at(-1)?.d === d ? days.at(-1).rows : (days.push({ d, rows: [] }), days.at(-1).rows)).push(r); });
   $("#log").innerHTML = days.map(g => `<h3 class="day-h">${esc(g.d)}</h3><ul class="log">${g.rows.map(r => `<li><details${openAll || openId === r.run_id ? " open" : ""}><summary>
-      <span class="pin ${r.decision}"></span><span class="time">${esc(timeOf(r.decided_at))}</span>
-      <span class="line"><b>${VERB[r.decision]}:</b> ${esc(r.invoice_number ? r.invoice_number : plainName(r.file_name))}, ${esc(r.vendor_name || "unknown sender")}<span class="sub">${esc(r.headline)}</span></span>
+      <span class="pin ${r.confirmed_at ? "APPROVE" : r.decision}"></span><span class="time">${esc(timeOf(r.decided_at))}</span>
+      <span class="line"><b>${r.confirmed_at ? "Passed for payment" : VERB[r.decision]}:</b> ${esc(r.invoice_number ? r.invoice_number : plainName(r.file_name))}, ${esc(r.vendor_name || "unknown sender")}<span class="sub">${r.confirmed_at ? `Held for the buyer's OK; ${esc(r.confirmed_by)} confirmed the goods arrived.` : esc(r.headline)}</span></span>
       <span class="amt">${r.total ? inr(r.total) : ""}</span></summary>${entryHtml(r)}</details></li>`).join("")}</ul>`).join("");
   wireCopy($("#log"), rows);
 }
@@ -1015,8 +1046,12 @@ async function loadRules() {
   <section class="ass small"><h2>Small suppliers without a GSTIN</h2><dl>
     <div><dt>Their bills are fine</dt><dd>A bill-book or hand-written bill is valid. It isn't a tax invoice, so there's no GST credit to claim.</dd></div>
     <div><dt>They can't charge GST</dt><dd>GST added without a GSTIN (or while registration is only applied for) is held: pay the amount before GST, or get a proper tax invoice.</dd></div>
-    <div><dt>Small buys don't need an order</dt><dd>Up to ${inr(p.petty_limit_inr)} without a purchase order. A first bill from a new shop is held until the buyer confirms it.</dd></div>
-    <div><dt>Big bills go by bank</dt><dd>Over ${inr(p.cash_limit_inr)} with no bank details is held: cash above that isn't allowed as a business expense.</dd></div>
+    <div><dt>The buyer confirms first</dt><dd>These bills are easy to make up, so they're never paid on the bill alone. Whoever bought the goods confirms they arrived, and their name goes into the audit trail.</dd></div>
+    <div><dt>Small buys don't need an order</dt><dd>Up to ${inr(p.petty_limit_inr)} a day from one supplier. Bills from the same day are added up, so one purchase split into small bills is caught.</dd></div>
+    <div><dt>Up to ${inr(p.small_supplier_month_cap_inr)} a month</dt><dd>Buying more than that from one such supplier needs a proper set-up: purchase orders, bank details and KYC.</dd></div>
+    <div><dt>The phone number must match</dt><dd>With no GSTIN, a shop is known by its phone number. A fake bill usually copies the shop's name, not its number.</dd></div>
+    <div><dt>Bill numbers only go up</dt><dd>A bill numbered lower than one the shop gave us earlier may come from a second bill book, so it's held.</dd></div>
+    <div><dt>Paid by UPI, not cash</dt><dd>Pay to the UPI ID on file, check the payee name, keep the receipt. More than ${inr(p.cash_limit_inr)} a day in cash isn't allowed as a business expense.</dd></div>
   </dl></section>
   <section class="ass"><h2>Assumed for this demo</h2><dl>
     <div><dt>Checked against the order</dt><dd>Not yet against goods received.</dd></div>

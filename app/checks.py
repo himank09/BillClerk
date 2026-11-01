@@ -50,6 +50,8 @@ SHORTS = {
     "LINE_NOT_ON_PO": "Has an item that isn't on the order.",
 }
 STATUS = {0: "pass", 1: "warn", 2: "hold", 3: "reject"}
+# holds that only need the buyer to say "yes, this arrived": the Confirm received button clears them
+CONFIRMABLE = {"BUYER_CONFIRM", "NEW_SMALL_SUPPLIER"}
 
 
 def similar(a, b):
@@ -76,6 +78,18 @@ class Run:
         self.flags.append(dict(stage=stage, severity=severity, code=code, message=message,
                                audience=audience, action=action, vendor_msg=vendor_msg or message,
                                short=short or SHORTS.get(code) or message, row=row))
+
+    def _digits(self, x):
+        return "".join(ch for ch in (x or "") if ch.isdigit())[-10:]  # last 10 digits of a phone number
+
+    def _saved(self, v):
+        return records.history(self.con, v["vendor_id"]) if v else []
+
+    def _same_day(self, v, no_po_only=False):
+        """Bills from this supplier with the same date that are already in records."""
+        d = self.ctx.get("date")
+        return [h for h in self._saved(v) if d and h["invoice_date"] == d.isoformat()
+                and (not no_po_only or not h["po_number"])]
 
     def stage(self, key, name, fn):
         t0 = time.perf_counter()
@@ -314,7 +328,7 @@ class Run:
     def s_vendor(self):
         f, checks = self.ctx["f"], []
         gst = (f.get("vendor_gstin") or "").upper()
-        digits = lambda x: "".join(ch for ch in (x or "") if ch.isdigit())[-10:]  # noqa: E731  last 10 digits of a phone number
+        digits = self._digits
         v = next((x for x in self.vendors if gst and x["gstin"] == gst), None)
         how = "GSTIN"
         if not v and f.get("vendor_phone") and len(digits(f["vendor_phone"])) == 10:
@@ -385,21 +399,65 @@ class Run:
                           short=f"Bank account changed to …{acct[-4:]} (on file: …{v['bank_account'][-4:]}). Possible payment fraud.")
         else:
             checks.append(dict(label="Bank details match the vendor master", ok=None, detail="not printed; we pay to the account on file"))
-        self._cash_check(v)
+        if not v["gstin"]:
+            self._small_supplier_checks(v, how, checks)   # includes the cash check
+        else:
+            self._cash_check(v)
         kind = "approved vendor" if v["gstin"] else "regular supplier, no GSTIN"
         return f"{v['name']}, {kind}", checks, dict(vendor_id=v["vendor_id"], vendor_name=v["name"])
 
+    def _small_supplier_checks(self, v, how, checks):
+        """Suppliers without a GSTIN are known by their phone number, and are only meant for small,
+        occasional buys: a fake bill usually gets the shop's name right but not its number, and
+        regular buying above a monthly limit should go through a proper supplier set-up."""
+        f, total = self.ctx["f"], self.ctx.get("total") or 0
+        on_bill, on_file = self._digits(f.get("vendor_phone")), self._digits(v.get("phone"))
+        if len(on_bill) == 10 and on_file and on_bill != on_file:
+            checks.append(dict(label="Phone number matches the one on file", ok=False,
+                               detail=f"bill {f['vendor_phone']} vs on file {v['phone']}"))
+            self.flag("vendor", "HOLD", "PHONE_MISMATCH",
+                      f"The bill gives the phone number {f['vendor_phone']}, but {v['name']}'s number on file is {v['phone']}. "
+                      "A supplier without a GSTIN is known by its phone number, and a fake bill usually copies the shop's name, not its number.",
+                      audience="internal",
+                      action=f"Call {v['name']} on {v['phone']} (the number on file) and ask whether they issued this bill.",
+                      short=f"The phone number on the bill ({f['vendor_phone']}) isn't {v['name']}'s ({v['phone']}).")
+        elif on_file:
+            checks.append(dict(label="Phone number matches the one on file", ok=True if on_bill else None,
+                               detail=f"{v['phone']}" if on_bill else "no phone number on the bill"))
+        self._cash_check(v)
+        d, cap = self.ctx.get("date"), self.policy["small_supplier_month_cap_inr"]
+        if d:
+            month = [h for h in self._saved(v) if (h["invoice_date"] or "")[:7] == d.isoformat()[:7]]
+            before = sum(h["total"] or 0 for h in month)
+            checks.append(dict(label=f"Within {inr(cap)} a month for a supplier without a GSTIN", ok=before + total <= cap,
+                               detail=f"{inr(before)} already in records for {d.strftime('%B')} + {inr(total)} now = {inr(before + total)}"))
+            if before + total > cap:
+                self.flag("vendor", "HOLD", "MONTHLY_CAP",
+                          (f"{inr(before)} from {v['name']} is already in records for {d.strftime('%B')}; with this bill it comes to "
+                           if month else "This bill alone is ") + f"{inr(before + total)}, over the {inr(cap)} a month we buy from a supplier "
+                          "without a GSTIN, purchase order or bank details. Buying this much regularly needs a proper supplier set-up.",
+                          audience="internal",
+                          action=f"Procurement sets {v['name']} up as a regular supplier: purchase orders, bank details and KYC.",
+                          short=(f"{v['name']} would reach {inr(before + total)} in {d.strftime('%B')}" if month else
+                                 f"{inr(total)} from {v['name']} in one bill") + f", over the {inr(cap)} monthly limit for small suppliers.")
+
     def _cash_check(self, v):
-        """A big bill with no bank account anywhere would have to be paid in cash, and cash over
-        Rs 10,000 a day to one person isn't allowed as a business expense (Income Tax Act, s. 40A(3))."""
+        """A big bill with no way to pay electronically would have to be paid in cash, and cash over
+        Rs 10,000 a day to one person isn't allowed as a business expense (Income Tax Act, s. 40A(3)).
+        The limit is per day, so bills from the same supplier on the same day are added up."""
         f, limit = self.ctx["f"], self.policy["cash_limit_inr"]
-        has_bank = (v and v["bank_account"]) or f.get("bank_account")
-        if not has_bank and (self.ctx.get("total") or 0) > limit:
+        has_bank = (v and (v["bank_account"] or v.get("upi"))) or f.get("bank_account") or f.get("vendor_upi")
+        total = self.ctx.get("total") or 0
+        others = self._same_day(v)
+        day = total + sum(h["total"] or 0 for h in others)
+        if not has_bank and day > limit:
+            together = f" Together with {len(others)} other bill{'s' if len(others) > 1 else ''} from the same day, that's {inr(day)}." if others else ""
             self.flag("vendor", "HOLD", "CASH_LIMIT",
-                      f"There are no bank details for this {inr(self.ctx['total'])} bill. Paying more than {inr(limit)} in cash to "
+                      f"There are no bank or UPI details for this {inr(total)} bill.{together} Paying more than {inr(limit)} in cash to "
                       "one person in a day isn't allowed as a business expense (Income Tax Act, section 40A(3)).",
                       audience="vendor", action="Get the supplier's bank account or UPI ID and pay electronically.",
-                      short=f"No bank details for a {inr(self.ctx['total'])} bill; over {inr(limit)} it can't be paid in cash.",
+                      short=(f"{inr(day)} to one supplier on one day with no bank or UPI details; over {inr(limit)} it can't be paid in cash."
+                             if others else f"No bank or UPI details for a {inr(total)} bill; over {inr(limit)} it can't be paid in cash."),
                       vendor_msg="Please share your bank account or UPI details; we can't pay bills of this size in cash.")
 
     def s_gst(self):
@@ -520,7 +578,21 @@ class Run:
             return f"{top['po_number']}, worked out from the items ({top['confidence']:.0%} match)", checks, dict(po_number=top["po_number"], inferred=True, candidates=scored)
         self.ctx["po"] = None
         petty = self.policy["petty_limit_inr"]
-        if (self.ctx.get("total") or 0) <= petty:
+        total = self.ctx.get("total") or 0
+        others = self._same_day(v, no_po_only=True)
+        day = total + sum(h["total"] or 0 for h in others)
+        if total <= petty < day:
+            # each bill is small, but together they're over the limit: one purchase split up to avoid an order
+            nos = ", ".join(h["invoice_number"] or "no number" for h in others)
+            self.flag("po", "HOLD", "SPLIT_BILLS",
+                      f"Each bill is under {inr(petty)}, but {v['name']} already has {len(others)} bill{'s' if len(others) > 1 else ''} dated "
+                      f"{self.ctx['date'].strftime('%d %b %Y').lstrip('0')} in records ({nos}). Together that's {inr(day)}, over the "
+                      f"{inr(petty)} limit for buying without an order. Splitting one purchase into small bills is the usual way round that limit.",
+                      audience="internal",
+                      action="Ask the buyer why this wasn't bought as one order; if it was one purchase, raise a purchase order for the whole amount.",
+                      short=f"Another bill from {v['name']} on the same day: together {inr(day)}, over the {inr(petty)} limit without an order.")
+            return f"No order, and {inr(day)} on one day", checks, dict(candidates=scored[:2])
+        if total <= petty:
             # small everyday buys (thread, tea, a repair) rarely have a purchase order
             self.flag("po", "INFO", "PETTY_NO_PO",
                       f"No purchase order, which is fine for a small purchase (up to {inr(petty)}).",
@@ -587,6 +659,22 @@ class Run:
                       audience="vendor", action="Ask the vendor whether this replaces the earlier invoice.",
                       short=f"Invoice number {h['invoice_number']} was already used for {inr(h['total'])}; this one is {inr(self.ctx['total'])}.")
             return "Invoice number reused", checks, {}
+        if not v["gstin"] and d:
+            # bill-book pages are numbered in order: a lower number dated after a higher one suggests a second bill book
+            ahead = [h for h in past if h["invoice_serial"] is not None and h["invoice_serial"] > serial
+                     and h["invoice_date"] and h["invoice_date"] < d.isoformat()]
+            checks.append(dict(label="Bill number follows the earlier ones", ok=not ahead,
+                               detail=(f"no. {serial} dated {d}, but no. {ahead[0]['invoice_serial']} was dated {ahead[0]['invoice_date']}"
+                                       if ahead else "in order with the bills in records")))
+            if ahead:
+                h = max(ahead, key=lambda x: x["invoice_serial"])
+                hd = date.fromisoformat(h["invoice_date"]).strftime("%d %b %Y").lstrip("0")
+                self.flag("duplicate", "HOLD", "SERIAL_BACKWARDS",
+                          f"This is bill no. {f.get('invoice_number')}, dated {d.strftime('%d %b %Y').lstrip('0')}, but {v['name']} already gave us "
+                          f"bill no. {h['invoice_number']} on {hd}. Bill-book numbers only go up, so this bill may come from a second bill book.",
+                          audience="internal",
+                          action=f"Call {v['name']} on {v['phone']} (the number on file) and ask whether they issued this bill.",
+                          short=f"Bill no. {f.get('invoice_number')} is lower than no. {h['invoice_number']}, which {v['name']} gave us earlier ({hd}).")
         po = self.ctx.get("po")
         near = [h for h in past if po and h["po_number"] == po["po_number"] and h["decision"] != "REJECT"
                 and abs(h["total"] - self.ctx["total"]) <= 1 and d and h["invoice_date"]
@@ -711,6 +799,19 @@ class Run:
                       audience="internal", action="Route to the finance manager for sign-off.",
                       short=f"Everything checks out, but {inr(total)} is over the {inr(limit)} limit.")
         sev = max([SEVERITY[f["severity"]] for f in self.flags], default=0)
+        f, v = self.ctx.get("f") or {}, self.ctx.get("vendor")
+        why = [w for w, yes in (("from a supplier without a GSTIN", self.ctx.get("unregistered")),
+                                ("written by hand", f.get("written_by_hand")),
+                                ("bought without a purchase order", v and not self.ctx.get("po"))) if yes]
+        if sev <= 1 and why:
+            # a bill like this is easy to make up, so it's never paid on the bill alone
+            checks.append(dict(label="Goods received, confirmed by the buyer", ok=False, detail="waiting for the buyer"))
+            self.flag("decide", "HOLD", "BUYER_CONFIRM",
+                      f"Everything on the bill checks out, but it's {' and '.join(why)}, so it isn't paid on the bill alone: "
+                      "the person who made the purchase confirms the goods arrived.",
+                      action="The person who made the purchase presses Confirm received.",
+                      short=f"Ready to pay {inr(total)} to {v['name']}, once the buyer confirms the goods arrived.")
+            sev = 2
         decision = {3: "REJECT", 2: "HOLD"}.get(sev, "APPROVE")
         self.ctx["decision"] = decision
         return decision, checks, {}
@@ -735,12 +836,22 @@ class Run:
                 break
 
     def _pay_step(self, v, f):
+        name = v["name"] if v else (f.get("vendor_name") or "the supplier")
+        name = name.title() if name.isupper() else name
         if v and v.get("bank_account"):
             return "Schedule payment on the vendor's terms to the account on file."
+        if v and v.get("upi"):
+            return (f"Pay by UPI to {v['upi']} (on file). Check the app shows {name} as the payee, "
+                    "and keep the payment receipt with this bill.")
+        if f.get("vendor_upi"):
+            return (f"Pay by UPI to {f['vendor_upi']} after confirming it with {name} by phone (it isn't on file yet). "
+                    "Check the app shows their name as the payee, and keep the payment receipt with this bill.")
         if f.get("bank_account"):
             return "Pay to the bank account printed on the bill, after confirming it with the supplier by phone."
-        how = f" (call {v['phone']} to arrange)" if v and v.get("phone") else ""
-        return f"Pay by UPI or cash against a signed receipt{how}; no bank account is on file."
+        phone = (v or {}).get("phone") or f.get("vendor_phone")
+        call = f" (call {phone})" if phone else ""
+        return (f"No bank or UPI details on file: ask {name} for a UPI ID{call}. Cash only up to "
+                f"{inr(self.policy['cash_limit_inr'])} a day, against a signed receipt.")
 
     def result(self):
         decision = self.ctx.get("decision", "HOLD")
@@ -749,15 +860,16 @@ class Run:
         blocking = sorted([x for x in self.flags if x["severity"] in ("HOLD", "REJECT")],
                           key=lambda x: -SEVERITY[x["severity"]])
         info = [x for x in self.flags if x["severity"] == "INFO"]
-        if decision == "APPROVE":
-            headline = f"Pay {inr(self.ctx.get('total') or 0)} to {v['name']}"
-            if info:
-                # notes read as one sentence: "(hand-written bill; not a tax invoice, ...)", keeping acronyms like PO intact
-                notes = [x["short"].rstrip(".") for x in info]
-                notes = [n[0].lower() + n[1:] if len(n) > 1 and n[1].islower() else n for n in notes]
-                headline += " (" + "; ".join(notes) + ")"
-        else:
-            headline = blocking[0]["short"]
+        payee = v["name"] if v else (f.get("vendor_name") or "the supplier")
+        payee = payee.title() if payee.isupper() else payee
+        pay_headline = f"Pay {inr(self.ctx.get('total') or 0)} to {payee}"
+        pay_short = pay_headline
+        if info:
+            # notes read as one sentence: "(hand-written bill; not a tax invoice, ...)", keeping acronyms like PO intact
+            notes = [x["short"].rstrip(".") for x in info]
+            notes = [n[0].lower() + n[1:] if len(n) > 1 and n[1].islower() else n for n in notes]
+            pay_headline += " (" + "; ".join(notes) + ")"
+        headline = pay_headline if decision == "APPROVE" else blocking[0]["short"]
         from .emails import draft_emails
         res = dict(run_id=self.run_id, file=self.path.name, decision=decision, headline=headline,
                    reasons=[x["message"] for x in blocking] or ["All checks passed."],
@@ -772,7 +884,9 @@ class Run:
                                 taxable=self.ctx.get("taxable"), tax=self.ctx.get("tax"), total=self.ctx.get("total")),
                    emails=draft_emails(self, decision), stages=self.stages, flags=self.flags,
                    seen_before=self.ctx.get("seen_before") or [], sha256=self.ctx.get("sha"),
-                   line_issues=self.ctx.get("line_issues") or {})
+                   line_issues=self.ctx.get("line_issues") or {},
+                   confirmable=bool(blocking) and all(x["code"] in CONFIRMABLE for x in blocking),
+                   pay_headline=pay_headline, pay_short=pay_short, pay_step=self._pay_step(v, f))
         return res
 
     def commit(self, res):

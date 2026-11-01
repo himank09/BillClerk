@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS decision_log (
   run_id TEXT PRIMARY KEY, decided_at TEXT, file_name TEXT, file_sha256 TEXT, file_bytes INTEGER,
   vendor_name TEXT, vendor_gstin TEXT, invoice_number TEXT, invoice_date TEXT, total REAL,
   decision TEXT, headline TEXT, reasons TEXT, next_actions TEXT, checks TEXT, rules TEXT,
-  saved_to_records INTEGER DEFAULT 0, saved_at TEXT, file_deleted_at TEXT
+  saved_to_records INTEGER DEFAULT 0, saved_at TEXT, file_deleted_at TEXT,
+  confirmed_by TEXT, confirmed_at TEXT
 );
 """
 
@@ -66,6 +67,10 @@ def connect():
     for col, typ in (("saved", "INTEGER DEFAULT 0"), ("saved_at", "TEXT"), ("bill_json", "TEXT")):
         if col not in cols:  # older databases: add the new columns
             con.execute(f"ALTER TABLE runs ADD COLUMN {col} {typ}")
+    log_cols = {r["name"] for r in con.execute("PRAGMA table_info(decision_log)")}
+    for col in ("confirmed_by", "confirmed_at"):
+        if col not in log_cols:
+            con.execute(f"ALTER TABLE decision_log ADD COLUMN {col} TEXT")
     if "saved" not in cols:
         # before 'Save to records' existed every approval was billed automatically;
         # those checks now start as unsaved, so drop their billing too
@@ -178,3 +183,59 @@ def set_saved(con, run_id, saved, policy=None):
         con.execute("INSERT INTO po_billed VALUES (?,?,?,?,?)",
                     (b["po_number"], b["line_no"], b["qty"], b["value"], run_id))
     con.commit()
+
+
+STATUS = {0: "pass", 1: "warn", 2: "hold", 3: "reject"}
+SEVERITY = {"PASS": 0, "INFO": 1, "HOLD": 2, "REJECT": 3}
+
+
+def confirm(con, run_id, name):
+    """The buyer confirms a small supplier's goods arrived. That is the only thing the bill
+    was waiting for, so it becomes payable. The audit trail keeps the original hold and adds
+    who confirmed it and when."""
+    from datetime import datetime
+    name = " ".join((name or "").split())[:60]
+    if not name:
+        raise SaveError("Type the name of the person who received the goods.")
+    r = con.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+    if not r:
+        raise SaveError("No check with that ID.")
+    res = json.loads(r["result_json"])
+    if res.get("confirmed"):
+        return res
+    if not res.get("confirmable"):
+        raise SaveError("This bill is held for something the buyer can't confirm away. Check the reasons.")
+    when = datetime.now().isoformat(sep=" ", timespec="seconds")
+    note = f"Received, confirmed by {name}"
+    by_code = {}
+    for fl in res["flags"] + [x for st in res["stages"] for x in st["flags"]]:
+        if fl["severity"] == "HOLD":   # only confirmable holds are left (checked above)
+            by_code[fl["code"]] = fl
+            fl.update(severity="INFO", short=note, row=note,
+                      message=f"{name} confirmed the goods were received ({when[:16]}).", action=None)
+    for st in res["stages"]:
+        if st["status"] in ("skipped",):
+            continue
+        worst = max([SEVERITY[x["severity"]] for x in st["flags"]], default=0)
+        if st["key"] == "decide":
+            st.update(status="pass", summary="APPROVE")
+            for c in st["checks"]:
+                if c["label"].startswith("Goods received"):
+                    c.update(ok=True, detail=f"confirmed by {name}")
+        elif st["status"] == "hold":
+            st.update(status=STATUS[worst], summary=note)
+    head = f"{res['pay_short']}: {name} confirmed the goods arrived."
+    steps = [res["pay_step"]]
+    if "NEW_SMALL_SUPPLIER" in by_code:
+        steps.append("Procurement adds the supplier to the list if we'll buy from them again.")
+    res.update(decision="APPROVE", headline=head, reasons=["All checks passed."],
+               notes=res["notes"] + [f"{name} confirmed the goods were received ({when[:16]})."],
+               next_actions=steps, confirmable=False, confirmed=dict(by=name, at=when),
+               emails=[e for e in res["emails"] if e["audience"] == "vendor"])
+    con.execute("UPDATE runs SET decision='APPROVE', headline=?, result_json=? WHERE run_id=?",
+                (head, json.dumps(res, default=str, ensure_ascii=False), run_id))
+    # the log keeps what was decided at the time; the confirmation is added beside it
+    con.execute("UPDATE decision_log SET confirmed_by=?, confirmed_at=?, next_actions=? WHERE run_id=?",
+                (name, when, json.dumps(steps, ensure_ascii=False), run_id))
+    con.commit()
+    return res

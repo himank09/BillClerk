@@ -45,6 +45,7 @@ class Invoice(BaseModel):
     vendor_name: str | None = None
     vendor_gstin: str | None = None
     vendor_phone: str | None = None
+    vendor_upi: str | None = Field(None, description="UPI ID printed on the bill (e.g. name@okaxis), if any")
     vendor_address: str | None = None
     gst_registration: str | None = Field(None, description="'registered' if a GSTIN is printed, 'applied' if it says GST applied for "
                                          "or shows a GST application number (ARN), 'none' otherwise")
@@ -92,7 +93,7 @@ Rules:
   rewritten totals. Only then set has_handwritten_changes to true and describe it in handwritten_notes.
 - For anything handwritten, give the values as written (include handwritten line items), and lower the
   confidence for any value that is hard to read.
-- Copy the supplier's phone number and address if printed. If there is no GSTIN, set vendor_gstin to null and
+- Copy the supplier's phone number, UPI ID and address if printed. If there is no GSTIN, set vendor_gstin to null and
   say in gst_registration whether GST registration is applied for (copy the ARN into gst_arn) or not mentioned.
 - A bill without a bill number, PO, or line-wise GST is fine: leave those fields null rather than guessing.
 - confidence: for each listed field, 0-1, how sure you are you read it correctly

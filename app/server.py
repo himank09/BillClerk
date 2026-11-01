@@ -240,6 +240,20 @@ def save_run(run_id: str):
     return {"saved": True}
 
 
+@app.post("/api/runs/{run_id}/confirm")
+async def confirm_run(run_id: str, request: Request):
+    body = await request.json()
+    con = records.connect()
+    try:
+        res = records.confirm(con, run_id, body.get("name"))
+        r = con.execute("SELECT saved, saved_at FROM runs WHERE run_id=?", (run_id,)).fetchone()
+    except records.SaveError as e:
+        raise HTTPException(409, str(e)) from None
+    finally:
+        con.close()
+    return JSONResponse(dict(res, saved=bool(r["saved"]), saved_at=r["saved_at"]))
+
+
 @app.post("/api/runs/{run_id}/unsave")
 def unsave_run(run_id: str):
     con = records.connect()
@@ -360,7 +374,8 @@ def setup():
     con.close()
     vend = [dict(id=v["vendor_id"], name=v["name"], state=v["state"],
                  gstin=v["gstin"] or ("Applied for" if v.get("registration") == "applied" else "None (small supplier)"),
-                 bank=f"{v['bank_name']} …{v['bank_account'][-4:]}" if v["bank_account"] else "None on file", status=v["status"],
+                 bank=f"{v['bank_name']} …{v['bank_account'][-4:]}" if v["bank_account"] else
+                 f"UPI {v['upi']}" if v.get("upi") else "None on file", status=v["status"],
                  block_reason=v["block_reason"]) for v in vendors]
     return dict(buyer=buyer, policy=policy, vendors=vend, pos=po_rows,
                 extractor="mock" if os.environ.get("EXTRACTOR") == "mock" else "gemini")
