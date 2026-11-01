@@ -138,7 +138,7 @@ data/
   correct_answers.json the right reading and decision for each test invoice
   saved_readings/      Gemini's readings, so a file is only read once
 invoices/              the 13 test invoices
-scripts/               makes the test data, and checks it
+scripts/               makes the test data, checks it, and pre-draws invoice previews
 check_invoices.py      runs invoices from the command line
 start_app.py           starts the web app
 ```

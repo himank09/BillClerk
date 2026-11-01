@@ -4,7 +4,7 @@ services:
     name: billclerk
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python scripts/make_previews.py
     startCommand: python start_app.py
     healthCheckPath: /api/samples
     envVars:
