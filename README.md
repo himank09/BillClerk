@@ -137,6 +137,19 @@ These are written into `data/rules.json` and shown on the app's Rules page.
 - **Over ₹10,000 must go by bank or UPI.** Cash payments above ₹10,000 a day to one person can't be claimed as a business expense under the income-tax rules on cash payments (old section 40A(3); India's new Income-tax Act took over in April 2026), so bills like that with no bank or UPI details are held. Bills from the same supplier on the same day are added up for this.
 - **An order is only worked out automatically when BillClerk is at least 85% sure** and the next best match is clearly behind. Otherwise a person picks.
 
+## What it doesn't do (yet)
+
+Known limits, written down on purpose:
+
+- **The AI can still misread a bill.** BillClerk is built so a misreading ends in a hold, not a wrong payment: the totals must add up, the GSTIN must pass its check digit, a hand-written date that looks impossible is read a second time, and a small shop's bill always needs the buyer's OK. A misreading can still give the wrong *reason* for a hold, and a type of bill nobody has tried yet may be read imperfectly.
+- **Reading speed depends on Google.** Usually 5 to 40 seconds a bill; at busy times Gemini can take two minutes or more, and BillClerk switches to a backup model. It waits rather than failing, and a bill it can't read is held for a person.
+- **No logins.** Anyone using the app can confirm a delivery or save to records under any name. A real deployment would tie each action to the person's own account.
+- **The free server sleeps and forgets.** It sleeps after about 15 minutes without visitors, and history and uploads start fresh after each restart (the 13 examples always work). Each visitor can upload 20 files an hour.
+- **Matched against the order only.** No check against goods actually received (a "3-way match").
+- **Simplified tax.** Every item is taxed at 18%. TDS on payments to job workers (stitching, embroidery) and composition-scheme suppliers aren't handled yet; both matter for a garment maker and would be next.
+- **The limits are company settings I chose:** ₹6,000 without an order, ₹25,000 a month per small shop, ₹5,00,000 before a manager signs off. They live in `data/rules.json`. The ₹10,000 daily cash limit is the law.
+- **Emails are drafts.** Nothing is sent; a person reviews and sends them.
+
 ## What's where
 
 ```

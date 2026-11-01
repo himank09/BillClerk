@@ -342,6 +342,7 @@ tr.click { cursor: pointer; } tr.click:hover { background: #FAFAFF; }
 .rules section { background: var(--white); border-radius: var(--radius); padding: 1.1rem 1.25rem; border: 1px solid var(--line-faint); border-top: 5px solid var(--hold); }
 .rules section.rej { border-top-color: var(--reject); }
 .rules section.ass { border-top-color: var(--violet); grid-column: 1 / -1; }
+.rules section.lim { border-top-color: var(--ink-soft); }
 .rules section.book { grid-column: 1 / -1; border-top-color: var(--line); }
 .rules .book .lead { margin: 0 0 0.75rem; max-width: 62rem; }
 .rules .arts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 1.5rem; }
@@ -1217,6 +1218,14 @@ async function loadRules() {
     <div><dt>Checked against the order</dt><dd>Not yet against goods received.</dd></div>
     <div><dt>GST at 18%</dt><dd>On every item here, for simplicity.</dd></div>
     <div><dt>${s.extractor === "mock" ? "Demo mode" : "Reading"}</dt><dd>${s.extractor === "mock" ? "Invoices are read from saved answers, not by the AI." : "Google Gemini reads each invoice once; the reading is kept, so a re-check gives the same answer."}</dd></div>
+  </dl></section>
+  <section class="ass lim"><h2>What it doesn't do (yet)</h2><dl>
+    <div><dt>The AI can misread</dt><dd>So a misreading ends in a hold, never a wrong payment: totals must add up, odd hand-written dates are read twice, small shops need the buyer's OK.</dd></div>
+    <div><dt>Speed depends on Google</dt><dd>Usually under 40 seconds a bill, sometimes two minutes at busy times. It waits rather than failing.</dd></div>
+    <div><dt>No logins</dt><dd>Anyone can confirm or save under any name here. A real setup ties each action to the person's own account.</dd></div>
+    <div><dt>Order only, not delivery</dt><dd>Bills are matched against the purchase order, not yet against goods received.</dd></div>
+    <div><dt>Simplified tax</dt><dd>18% on every item. TDS for job workers and composition-scheme suppliers would come next.</dd></div>
+    <div><dt>Settings, not law</dt><dd>${inr(p.petty_limit_inr)} without an order, ${inr(p.small_supplier_month_cap_inr)} a month per shop and ${inr(p.approval_limit_inr)} for a manager are my choices. The ${inr(p.cash_limit_inr)} cash limit is the law.</dd></div>
   </dl></section>`;
   if (pendingRule) {  // opened from a reason on a result card
     const el = document.getElementById("rule-" + pendingRule); pendingRule = null;
