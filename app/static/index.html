@@ -46,17 +46,22 @@ mark { background: #FFF0A8; color: var(--ink); font-weight: 600; padding: 0 0.25
 .brand small { font-weight: 400; color: #B9C6D2; font-size: 0.88rem; }
 nav { display: flex; gap: 0.25rem; height: 100%; }
 nav button { background: none; border: 0; padding: 0 0.85rem; color: #B9C6D2; font-weight: 500; height: 100%; position: relative; }
-nav button:hover { color: #fff; }
+nav button:hover { color: #fff; background: rgba(255,255,255,.06); }
 nav button[aria-current="page"] { color: #fff; }
 nav button[aria-current="page"]::after { content: ""; position: absolute; left: 0.6rem; right: 0.6rem; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: #A79CF2; }
 .spacer { flex: 1; }
 .mode { font-size: 0.82rem; color: #F3D9A4; white-space: nowrap; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; border: 1.5px solid var(--line); background: var(--white); border-radius: 10px; padding: 0.6rem 1.05rem; font-weight: 600; min-height: 44px; }
-.btn:hover { border-color: var(--ink); }
+.btn { transition: background .15s, border-color .15s, transform .15s, box-shadow .15s; }
+.btn:hover:not(:disabled) { border-color: var(--ink); transform: translateY(-1px); box-shadow: 0 6px 14px -8px rgba(29, 43, 58, .45); }
+.btn:active:not(:disabled) { transform: none; box-shadow: none; }
 .btn.primary { background: var(--violet); border-color: var(--violet); color: #fff; }
 .btn.primary:hover { background: var(--violet-dark); border-color: var(--violet-dark); }
-.link { background: none; border: 0; padding: 0.2rem; color: var(--violet); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; min-height: 32px; }
+.link { background: none; border: 0; padding: 0.2rem; color: var(--violet); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; min-height: 32px; transition: color .15s, text-decoration-thickness .15s; }
+.link:hover { color: var(--violet-dark); text-decoration-thickness: 2px; }
+.link.danger:hover { color: #8E1A1F; }
+a:hover { text-decoration-thickness: 2px; }
 
 /* ---------- landing: the upload is the page ---------- */
 .landing {
@@ -74,9 +79,12 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
   background: var(--white); border: 2.5px dashed #A79CF2; border-radius: 20px; cursor: pointer;
   box-shadow: 0 18px 40px -24px rgba(67, 56, 160, 0.55); transition: border-color .15s, background .15s, transform .15s;
 }
-.drop:hover, .drop.over { border-color: var(--violet); background: #FBFAFF; }
+.drop:hover, .drop.over { border-color: var(--violet); border-style: solid; background: #FBFAFF; box-shadow: 0 22px 46px -22px rgba(67, 56, 160, 0.7); }
+.drop:hover .fake-btn { background: var(--violet-dark); border-color: var(--violet-dark); transform: translateY(-1px); }
+.drop:hover .icon { transform: translateY(-2px); }
+.drop .icon, .drop .fake-btn { transition: transform .15s, background .15s; }
 .drop.over { transform: scale(1.01); }
-.drop:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.drop:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 3px; }  /* keyboard users only */
 .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .drop .icon { width: 64px; height: 64px; border-radius: 18px; background: var(--violet-soft); display: grid; place-items: center; color: var(--violet); }
 .drop b { font-size: 1.3rem; }
@@ -117,8 +125,9 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
 .result h2 a.reason.big::after { content: " ↗"; font-size: 0.8em; opacity: .8; }
 .result .reasons { margin: 0.5rem 0 0; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; font-size: 0.9rem; }
 .result .reasons a.reason { color: #fff; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); border-radius: 99px; padding: 0.15rem 0.65rem; text-decoration: none; font-weight: 600; }
-.result .reasons a.reason:hover { background: rgba(255,255,255,.3); }
-.result .reasons a.reason.note { font-weight: 500; background: transparent; }
+.result .reasons a.reason { transition: background .15s, transform .15s; }
+.result .reasons a.reason:hover { background: rgba(255,255,255,.34); transform: translateY(-1px); }
+
 .result .reasons a.reason::after { content: " ↗"; opacity: .75; }
 .result .hint { margin: 0.45rem 0 0; font-size: 0.8rem; opacity: .75; }
 .result .reasons .done { font-weight: 600; }
@@ -180,6 +189,8 @@ nav button[aria-current="page"]::after { content: ""; position: absolute; left: 
 .step + .step { border-top: 1px solid var(--line-faint); }
 .step > button { width: 100%; display: grid; grid-template-columns: 1.6rem 8.5rem 1fr 1rem; gap: 0 0.6rem; align-items: center; padding: 0.6rem 0; background: none; border: 0; text-align: left; min-height: 44px; }
 .step > button:disabled { cursor: default; }
+.step > button:not(:disabled):hover { background: var(--paper); border-radius: 8px; }
+.step > button:not(:disabled):hover .chev { color: var(--violet); }
 .step .i { width: 1.3rem; height: 1.3rem; border-radius: 50%; display: inline-grid; place-items: center; font-size: 0.72rem; font-weight: 800; color: #fff; }
 .step .name { font-weight: 600; }
 .step .sum { color: var(--ink-soft); font-size: 0.92rem; }
@@ -593,7 +604,7 @@ $("#another").onclick = () => { if (running) return; endTour(); goHome(); rememb
 
 /* upload */
 const drop = $("#drop");
-$("#file").onchange = e => e.target.files[0] && upload(e.target.files[0], e.target);
+$("#file").onchange = e => { e.target.blur(); e.target.files[0] && upload(e.target.files[0], e.target); };
 $("#camera").onchange = e => e.target.files[0] && upload(e.target.files[0], e.target);
 ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
