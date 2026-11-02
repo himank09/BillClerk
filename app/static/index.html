@@ -129,6 +129,20 @@ a:hover { text-decoration-thickness: 2px; }
 .result .reasons a.reason:hover { background: rgba(255,255,255,.34); transform: translateY(-1px); }
 
 .result .reasons a.reason::after { content: " ↗"; opacity: .75; }
+.toast { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 60; display: flex; gap: 0.75rem; align-items: center;
+  background: var(--ink); color: #fff; padding: 0.7rem 0.9rem 0.7rem 1.1rem; border-radius: 12px; box-shadow: 0 14px 34px -12px rgba(0,0,0,.45); max-width: calc(100vw - 32px); }
+.toast[hidden] { display: none; }
+.toast .link { color: #C9C2FF; min-height: 0; }
+.toast .link:hover { color: #fff; }
+.toast .x { background: none; border: 0; color: #fff; font-size: 1.3rem; line-height: 1; opacity: .7; padding: 0 0.2rem; }
+.toast .x:hover { opacity: 1; }
+.sheet.loading img, .sheet.loading .stamp { opacity: 0; }
+.sheet .stamp { transition: opacity .25s; }
+.sheet img { transition: opacity .25s; }
+.sheet .loading-note { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--ink-soft); font-size: 0.95rem;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.6) 50%, transparent 70%) var(--paper); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .sheet .loading-note { animation: none; } }
 .result .hint { margin: 0.45rem 0 0; font-size: 0.8rem; opacity: .75; }
 .result .reasons .done { font-weight: 600; }
 .result .also li { margin: 0.1rem 0; }
@@ -555,10 +569,16 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const api = async (url, opts) => { const r = await fetch(url, opts); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || "Something went wrong."); return j; };
 let samples = [], running = false, lastResult = null;
 const isUpload = f => !!f && !samples.some(s => s.file === f);
+function toast(msg, label, act) {
+  const t = $("#toast"); t.innerHTML = `<span>${esc(msg)}</span>${label ? `<button class="link">${esc(label)}</button>` : ""}<button class="x" aria-label="Close">×</button>`;
+  t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 9000);
+  t.querySelector(".x").onclick = () => t.hidden = true;
+  if (label) t.querySelector(".link").onclick = () => { t.hidden = true; act(); };
+}
 function flash(msg) { const n = $("#upload-ok"); n.textContent = msg; n.hidden = false; setTimeout(() => n.hidden = true, 5000); }
 
 /* pages */
-document.querySelectorAll("nav button").forEach(b => b.onclick = () => { if (running) return; show(b.dataset.view); });
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => { detach(); show(b.dataset.view); });
 
 /* back / forward: every screen you visit is remembered, like browser tabs */
 const trail = []; let at = -1;
@@ -569,8 +589,7 @@ function remember(entry) {
   return entry;
 }
 function arrows() {
-  $("#nav-back").disabled = running || at <= 0; $("#nav-fwd").disabled = running || at >= trail.length - 1;
-  $("#nav-home").disabled = running;
+  $("#nav-back").disabled = at <= 0; $("#nav-fwd").disabled = at >= trail.length - 1;
   trail[at]?.screen === "home" ? $("#nav-home").setAttribute("aria-current", "page") : $("#nav-home").removeAttribute("aria-current");
 }
 function revisit(e) {
@@ -583,12 +602,12 @@ function revisit(e) {
 window.addEventListener("popstate", ev => {
   const i = ev.state?.at;
   if (i == null || !trail[i]) return;
-  if (running) { history.go(at - i); return; }  // finish the check first
+  detach();
   at = i; revisit(trail[at]); arrows();
 });
 $("#nav-back").onclick = () => history.back();
 $("#nav-fwd").onclick = () => history.forward();
-$("#nav-home").onclick = () => { if (running) return; endTour(); closeDrawer(); showView("check"); goHome(); remember({ screen: "home" }); };
+$("#nav-home").onclick = () => { detach(); endTour(); closeDrawer(); showView("check"); goHome(); remember({ screen: "home" }); };
 function goHome() { $("#workspace").hidden = true; $("#landing").hidden = false; window.scrollTo(0, 0); }
 function show(v) { showView(v); remember(v === "check" && !$("#workspace").hidden && lastEntry() ? { ...lastEntry() } : { screen: v === "check" ? "home" : v }); }
 const lastEntry = () => [...trail].reverse().find(e => e.screen === "result" && e.d);
@@ -600,7 +619,7 @@ function showView(v) {
   if (v === "rules") loadRules();
   window.scrollTo(0, 0);
 }
-$("#another").onclick = () => { if (running) return; endTour(); goHome(); remember({ screen: "home" }); };
+$("#another").onclick = () => { detach(); endTour(); goHome(); remember({ screen: "home" }); };
 
 /* upload */
 const drop = $("#drop");
@@ -610,10 +629,11 @@ $("#camera").onchange = e => e.target.files[0] && upload(e.target.files[0], e.ta
 ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]));
 async function upload(f, input) {
-  if (running) return;
+  detach();
   const err = $("#upload-err"); err.hidden = true;
   const fd = new FormData(); fd.append("file", f);
-  try { const j = await api("/api/upload", { method: "POST", body: fd }); if (input) input.value = ""; check(j.file, f.name, "Uploaded just now"); }
+  try { const j = await api("/api/upload", { method: "POST", body: fd }); if (input) input.value = ""; if (/^image\/(jpeg|png)$/.test(f.type)) localPics[j.file] = URL.createObjectURL(f);  // show the photo straight away
+    check(j.file, f.name, "Uploaded just now"); }
   catch (e) { err.textContent = e.message; err.hidden = false; }
 }
 
@@ -638,18 +658,37 @@ function stepRows() {
     <div class="progress" hidden></div><ul class="detail" hidden></ul></li>`).join("");
 }
 const stepEl = (root, k) => root.querySelector(`.step[data-key="${k}"]`);
+const localPics = {};  // photos picked in this browser: no need to wait for the server to draw them
 function setPreview(file, sheet) {
-  sheet.classList.remove("nopreview");
-  sheet.innerHTML = `<img alt="The invoice" src="/api/preview/${encodeURIComponent(file)}">`;
-  sheet.querySelector("img").onerror = () => {
+  sheet.classList.remove("nopreview"); sheet.classList.add("loading");
+  sheet.innerHTML = `<p class="loading-note">Loading the invoice…</p><img alt="The invoice" src="${localPics[file] || `/api/preview/${encodeURIComponent(file)}`}">`;
+  const img = sheet.querySelector("img");
+  img.onload = () => { sheet.classList.remove("loading"); sheet.querySelector(".loading-note")?.remove(); };
+  img.onerror = () => {
+    sheet.classList.remove("loading"); sheet.querySelector(".loading-note")?.remove();
     sheet.classList.add("nopreview");
     sheet.querySelector("img").outerHTML = `<div class="np"><svg width="38" height="46" viewBox="0 0 38 46" aria-hidden="true"><path d="M3 3h22l10 10v30H3z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M25 3v10h10M12 25l14 12M26 25L12 37" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><span>Can't show this file</span></div>`;
   };
 }
 let current = null;
+/* Leaving a check doesn't stop it: the server finishes and saves it either way. The page
+   just stops drawing it, and says when it's done. */
+let onScreen = 0;
+function detach() {
+  if (!running) return;
+  onScreen++; running = false; arrows();
+}
+function finishedAway(entry, d) {
+  entry.d = d;  // back/forward will now show the result
+  toast(`Finished checking ${entry.title}: ${d.confirmable ? "needs the buyer's OK" : WORD[d.decision].toLowerCase()}.`,
+        "Open", () => { closeDrawer(); showView("check"); showResult(entry); current = remember({ ...entry }); });
+}
 function check(file, title, sub) {
+  detach();
   running = true;
+  const token = ++onScreen;
   current = remember({ screen: "result", file, title, sub, d: null });
+  const entry = current;
   $("#landing").hidden = true; $("#workspace").hidden = false; window.scrollTo(0, 0);
   $("#title").textContent = title; $("#subtitle").innerHTML = hl(sub);
   $("#result").innerHTML = `<div class="checking">Checking the invoice…</div>`; $("#read").innerHTML = "";
@@ -661,27 +700,33 @@ function check(file, title, sub) {
   const pump = () => { if (busy || !queue.length) return; busy = true; const [k, d] = queue.shift(); handle(k, d); setTimeout(() => { busy = false; pump(); }, k === "stage" ? gap : 0); };
   // checks this file already had, so a dropped connection can find the new one
   const known = api("/api/runs").then(rs => new Set(rs.filter(r => r.file === file).map(r => r.run_id))).catch(() => new Set());
-  for (const k of ["stage", "progress", "result", "failed"]) es.addEventListener(k, e => { queue.push([k === "failed" ? "error" : k, JSON.parse(e.data)]); pump(); if (k === "result" || k === "failed") { finished = true; es.close(); } });
-  es.onerror = () => { if (!finished) { finished = true; es.close(); recover(file, known); } };
+  for (const k of ["stage", "progress", "result", "failed"]) es.addEventListener(k, e => {
+    const d = JSON.parse(e.data);
+    if (k === "result" || k === "failed") { finished = true; es.close(); }
+    if (token !== onScreen) { if (k === "result") finishedAway(entry, d); return; }   // the person moved on
+    queue.push([k === "failed" ? "error" : k, d]); pump();
+  });
+  es.onerror = () => { if (!finished) { finished = true; es.close(); recover(file, known, token, entry); } };
 }
 /* The connection dropped (slow Gemini, flaky network). The server keeps going and saves
    the result, so wait for it to appear in history and show it as if nothing happened. */
-async function recover(file, knownP) {
+async function recover(file, knownP, token, entry) {
   const known = await knownP;
-  $("#result").innerHTML = `<div class="checking">Still checking… the connection dropped, so BillClerk is fetching the result.</div>`;
+  if (token === onScreen) $("#result").innerHTML = `<div class="checking">Still checking… the connection dropped, so BillClerk is fetching the result.</div>`;
   for (let i = 0; i < 80; i++) {
     await new Promise(r => setTimeout(r, 3000));
     try {
       const r = (await api("/api/runs")).find(x => x.file === file && !known.has(x.run_id));
       if (!r) continue;
       const d = await api(`/api/runs/${encodeURIComponent(r.run_id)}`);
+      if (token !== onScreen) { finishedAway(entry, d); return; }
       const root = $("#steps"); root.innerHTML = stepRows();
       d.stages.forEach(st => { const li = stepEl(root, st.key); if (li) fillStep(li, st); });
       handle("result", d);
       return;
     } catch { /* server still waking or busy: try again */ }
   }
-  handle("error", { message: "Lost the connection to the server and couldn't get the result. Try checking it again." });
+  if (token === onScreen) handle("error", { message: "Lost the connection to the server and couldn't get the result. Try checking it again." });
 }
 function showResult(e) {
   const d = e.d; lastResult = d;
@@ -1268,5 +1313,6 @@ function wakeNote(force) {
   $("#mode").textContent = s.extractor === "mock" ? "Demo mode: saved answers" : "";
 })();
 </script>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

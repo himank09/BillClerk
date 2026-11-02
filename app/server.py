@@ -69,7 +69,7 @@ def _forget_file(name):
     reading = reading_file(p)
     p.unlink()
     reading.unlink(missing_ok=True)
-    (records.DATA / "previews" / (p.stem + ".png")).unlink(missing_ok=True)
+    (records.DATA / "previews" / (p.stem + ".jpg")).unlink(missing_ok=True)
     con = records.connect()
     try:
         records.log_file_deleted(con, p.name)  # the decision stays in the audit trail; it just notes the file is gone
@@ -386,7 +386,7 @@ def file(name: str):
 
 @app.get("/api/preview/{name}")
 def preview(name: str):
-    """First page as a PNG, so PDFs and photos show the same way in every browser."""
+    """First page as a JPEG, so PDFs and photos show the same way in every browser."""
     src = _find(name)
     try:
         return _render_preview(src)
@@ -396,7 +396,8 @@ def preview(name: str):
 
 
 def _render_preview(src):
-    out = records.DATA / "previews" / (src.stem + ".png")
+    # JPEG, not PNG: a fifth of the size, so the picture appears quickly even on the free server
+    out = records.DATA / "previews" / (src.stem + ".jpg")
     if not out.exists() or out.stat().st_mtime < src.stat().st_mtime:
         out.parent.mkdir(exist_ok=True)
         if src.suffix.lower() == ".pdf":
@@ -408,8 +409,8 @@ def _render_preview(src):
             from PIL import Image
             img = Image.open(src)
             img.thumbnail((1240, 1754))
-        img.convert("RGB").save(out, "PNG", optimize=True)
-    return FileResponse(out, media_type="image/png", headers={"Cache-Control": "max-age=3600"})
+        img.convert("RGB").save(out, "JPEG", quality=82, optimize=True, progressive=True)
+    return FileResponse(out, media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
 
 
 @app.get("/api/setup")
